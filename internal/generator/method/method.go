@@ -16,7 +16,8 @@ type Method struct {
 	Name                  string
 	HasContext            bool
 	ReturnsError          bool
-	ParameterNames        []jen.Code
+	HasVariadic           bool
+	ParameterNames        []string
 	ParametersNameAndType []jen.Code
 	ReturnTypes           []jen.Code
 	ContextParameter      *int
@@ -29,6 +30,7 @@ func ParseMethod(name string, signature *types.Signature) (*Method, error) {
 		Name:             name,
 		ReturnErrorIndex: nil,
 		ContextParameter: nil,
+		HasVariadic:      signature.Variadic(),
 	}
 
 	isVariadic := signature.Variadic()
@@ -40,7 +42,7 @@ func ParseMethod(name string, signature *types.Signature) (*Method, error) {
 			m.ContextParameter = new(int)
 			*m.ContextParameter = i
 			m.ParametersNameAndType = append(m.ParametersNameAndType, jen.Id(ctxVarName).Add(jen.Qual("context", "Context")))
-			m.ParameterNames = append(m.ParameterNames, jen.Id(ctxVarName))
+			m.ParameterNames = append(m.ParameterNames, ctxVarName)
 		} else {
 			paramName := fmt.Sprintf("arg%d", i)
 			paramType, err := utils.ToType(param.Type(), isVariadic && i == lastIndex)
@@ -48,7 +50,7 @@ func ParseMethod(name string, signature *types.Signature) (*Method, error) {
 				return nil, fmt.Errorf("failed to convert type=%v; error=%w", param.Type(), err)
 			}
 			m.ParametersNameAndType = append(m.ParametersNameAndType, jen.Id(paramName).Add(paramType))
-			m.ParameterNames = append(m.ParameterNames, jen.Id(paramName))
+			m.ParameterNames = append(m.ParameterNames, paramName)
 		}
 	}
 	for i := 0; i < signature.Results().Len(); i++ {
