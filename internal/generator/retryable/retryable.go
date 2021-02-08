@@ -3,7 +3,7 @@ package retryable
 import (
 	"fmt"
 	"github.com/csueiras/reinforcer/internal/generator/method"
-	. "github.com/dave/jennifer/jen"
+	"github.com/dave/jennifer/jen"
 )
 
 const (
@@ -12,64 +12,67 @@ const (
 	nonRetryableErrVarName = "nonRetryableErr"
 )
 
-type retryable struct {
+// Retryable is a code generator for a method that can be retried on error
+type Retryable struct {
 	method       *method.Method
 	structName   string
 	receiverName string
 }
 
-func NewRetryable(method *method.Method, structName string, receiverName string) *retryable {
+// NewRetryable is a constructor for Retryable, the given method must be an error-returning method
+func NewRetryable(method *method.Method, structName string, receiverName string) *Retryable {
 	if !method.ReturnsError {
 		panic("method does not return an error and is thus not retryable")
 	}
 
-	return &retryable{
+	return &Retryable{
 		method:       method,
 		structName:   structName,
 		receiverName: receiverName,
 	}
 }
 
-func (r *retryable) Statement() (*Statement, error) {
+// Statement generates the jen.Statement for this retryable method
+func (r *Retryable) Statement() (*jen.Statement, error) {
 	methodCallStatements, err := r.methodCall(r.method.ParameterNames)
 	if err != nil {
 		return nil, err
 	}
-	return Func().Params(Id(r.receiverName).Op("*").Id(r.structName)).Id(r.method.Name).Call(r.method.ParametersNameAndType...).Params(r.method.ReturnTypes...).Block(
+	return jen.Func().Params(jen.Id(r.receiverName).Op("*").Id(r.structName)).Id(r.method.Name).Call(r.method.ParametersNameAndType...).Params(r.method.ReturnTypes...).Block(
 		methodCallStatements...,
 	), nil
 }
 
-func (r *retryable) methodCall(params []Code) ([]Code, error) {
-	statements := []Code{
-		Var().Id(nonRetryableErrVarName).Id("error"),
+func (r *Retryable) methodCall(params []jen.Code) ([]jen.Code, error) {
+	statements := []jen.Code{
+		jen.Var().Id(nonRetryableErrVarName).Id("error"),
 	}
 
 	// Declare the return vars
-	returnVars := make([]Code, 0, len(r.method.ReturnTypes))
+	returnVars := make([]jen.Code, 0, len(r.method.ReturnTypes))
 
 	for i := 0; i < len(r.method.ReturnTypes); i++ {
 		// Use auto-generated names for variables to avoid conflicts with existing names within the signature
 		varName := fmt.Sprintf("r%d", i)
 		if *r.method.ReturnErrorIndex == i {
-			returnVars = append(returnVars, Id("err"))
+			returnVars = append(returnVars, jen.Id("err"))
 
 			// Don't declare the error variable
 			continue
 		}
 
 		// Build the list of values to return from the execution of the method
-		returnVars = append(returnVars, Id(varName))
+		returnVars = append(returnVars, jen.Id(varName))
 
 		// Declare var for the values to be returned
-		statements = append(statements, Var().Id(varName).Add(r.method.ReturnTypes[i]))
+		statements = append(statements, jen.Var().Id(varName).Add(r.method.ReturnTypes[i]))
 	}
 
 	ctxParamName := ctxVarName
-	var ctxParam Code
+	var ctxParam jen.Code
 	if r.method.HasContext {
 		// Passes down the context if one is present in the signature
-		ctxParam = Id(ctxVarName)
+		ctxParam = jen.Id(ctxVarName)
 	} else {
 		// Use context.Background() if no context is present in signature
 		ctxParam = contextBackground()
@@ -77,42 +80,42 @@ func (r *retryable) methodCall(params []Code) ([]Code, error) {
 	}
 
 	// anonymous function passed to the middleware
-	call := Func().Call(Id(ctxParamName).Qual("context", "Context")).Params(Id("error")).Block(
+	call := jen.Func().Call(jen.Id(ctxParamName).Qual("context", "Context")).Params(jen.Id("error")).Block(
 		// var err error
-		Var().Id("err").Id("error"),
+		jen.Var().Id("err").Id("error"),
 		// r0, r1, ..., err = r.delegate.Fn(args...)
-		List(returnVars...).Op("=").Id(r.receiverName).Dot("delegate").Dot(r.method.Name).Call(params...),
+		jen.List(returnVars...).Op("=").Id(r.receiverName).Dot("delegate").Dot(r.method.Name).Call(params...),
 		// if r.errorPredicate(methodName, err) {
 		//  return r0, r1, ..., err
 		// }
-		If(Id(r.receiverName).Dot("errorPredicate").Call(Lit(r.method.Name), Id(errVarName))).Block(
-			Return(returnVars...),
+		jen.If(jen.Id(r.receiverName).Dot("errorPredicate").Call(jen.Lit(r.method.Name), jen.Id(errVarName))).Block(
+			jen.Return(returnVars...),
 		),
 		// nonRetryableErr = err
-		Id(nonRetryableErrVarName).Op("=").Id(errVarName),
+		jen.Id(nonRetryableErrVarName).Op("=").Id(errVarName),
 		// return nil
-		Return(Nil()),
+		jen.Return(jen.Nil()),
 	)
 
-	statements = append(statements, Id("err").Op(":=").Id(r.receiverName).Dot("run").Call(ctxParam, Lit(r.method.Name), call))
+	statements = append(statements, jen.Id("err").Op(":=").Id(r.receiverName).Dot("run").Call(ctxParam, jen.Lit(r.method.Name), call))
 
-	nonRetryErrReturns := make([]Code, len(returnVars))
+	nonRetryErrReturns := make([]jen.Code, len(returnVars))
 	copy(nonRetryErrReturns, returnVars)
-	nonRetryErrReturns[*r.method.ReturnErrorIndex] = Id(nonRetryableErrVarName)
+	nonRetryErrReturns[*r.method.ReturnErrorIndex] = jen.Id(nonRetryableErrVarName)
 
 	// if nonRetryableErr != nil {
 	//   return ....
 	// }
-	statements = append(statements, If(Id(nonRetryableErrVarName).Op("!=").Nil()).Block(
-		Return(nonRetryErrReturns...),
+	statements = append(statements, jen.If(jen.Id(nonRetryableErrVarName).Op("!=").Nil()).Block(
+		jen.Return(nonRetryErrReturns...),
 	))
 
 	// return r0, r1, ..., err
-	statements = append(statements, Return(returnVars...))
+	statements = append(statements, jen.Return(returnVars...))
 
 	return statements, nil
 }
 
-func contextBackground() Code {
-	return Qual("context", "Background").Call()
+func contextBackground() jen.Code {
+	return jen.Qual("context", "Background").Call()
 }

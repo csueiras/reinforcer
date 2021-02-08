@@ -294,10 +294,9 @@ func (g *GeneratedService) GetUserID2(ctx context.Context, arg1 *string) (*unres
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			g := generator.NewGenerator()
 
 			ifaces := loadInterface(t, tt.inputs)
-			got, err := g.Generate(generator.Config{
+			got, err := generator.Generate(generator.Config{
 				OutPkg: "resilient",
 				Files:  ifaces,
 			})
