@@ -104,20 +104,24 @@ type GeneratedService struct {
 	delegate targetService
 }
 
-func NewService(delegate targetService, runnerFactory runnerFactory) *GeneratedService {
+func NewService(delegate targetService, runnerFactory runnerFactory, options ...Option) *GeneratedService {
 	if delegate == nil {
 		panic("provided nil delegate")
 	}
 	if runnerFactory == nil {
 		panic("provided nil runner factory")
 	}
-	return &GeneratedService{
+	c := &GeneratedService{
 		base: &base{
 			errorPredicate: RetryAllErrors,
 			runnerFactory:  runnerFactory,
 		},
 		delegate: delegate,
 	}
+	for _, o := range options {
+		o(c.base)
+	}
+	return c
 }
 func (g *GeneratedService) A(ctx context.Context) error {
 	var nonRetryableErr error
@@ -219,20 +223,24 @@ type GeneratedService struct {
 	delegate targetService
 }
 
-func NewService(delegate targetService, runnerFactory runnerFactory) *GeneratedService {
+func NewService(delegate targetService, runnerFactory runnerFactory, options ...Option) *GeneratedService {
 	if delegate == nil {
 		panic("provided nil delegate")
 	}
 	if runnerFactory == nil {
 		panic("provided nil runner factory")
 	}
-	return &GeneratedService{
+	c := &GeneratedService{
 		base: &base{
 			errorPredicate: RetryAllErrors,
 			runnerFactory:  runnerFactory,
 		},
 		delegate: delegate,
 	}
+	for _, o := range options {
+		o(c.base)
+	}
+	return c
 }
 func (g *GeneratedService) A() {
 	g.delegate.A()

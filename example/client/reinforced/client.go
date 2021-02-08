@@ -12,20 +12,24 @@ type Client struct {
 	delegate targetClient
 }
 
-func NewClient(delegate targetClient, runnerFactory runnerFactory) *Client {
+func NewClient(delegate targetClient, runnerFactory runnerFactory, options ...Option) *Client {
 	if delegate == nil {
 		panic("provided nil delegate")
 	}
 	if runnerFactory == nil {
 		panic("provided nil runner factory")
 	}
-	return &Client{
+	c := &Client{
 		base: &base{
 			errorPredicate: RetryAllErrors,
 			runnerFactory:  runnerFactory,
 		},
 		delegate: delegate,
 	}
+	for _, o := range options {
+		o(c.base)
+	}
+	return c
 }
 func (c *Client) SayHello(ctx context.Context, arg1 string) error {
 	var nonRetryableErr error
