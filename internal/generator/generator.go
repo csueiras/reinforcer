@@ -113,6 +113,7 @@ func (g *generator) generateFile(outPkg string, fileCfg *FileConfig) (string, er
 	f.Add(Func().Id("New"+fileCfg.SrcTypeName).Params(
 		Id("delegate").Id(fileCfg.targetName()),
 		Id("runnerFactory").Id("runnerFactory"),
+		Id("options").Op("...").Id("Option"),
 	).Op("*").Id(fileCfg.OutTypeName).Block(
 		// if delegate == nil
 		If(Id("delegate").Op("==").Nil().Block(
@@ -124,7 +125,8 @@ func (g *generator) generateFile(outPkg string, fileCfg *FileConfig) (string, er
 			// panic("...")
 			Panic(Lit("provided nil runner factory")),
 		)),
-		Return(Op("&").Id(fileCfg.OutTypeName).Values(Dict{
+		// c:= &OutTypeName{...}
+		Id("c").Op(":=").Add(Op("&").Id(fileCfg.OutTypeName).Values(Dict{
 			// embed the base struct
 			Id("base"): Op("&").Id("base").Values(Dict{
 				Id("errorPredicate"): Id("RetryAllErrors"),
@@ -132,6 +134,11 @@ func (g *generator) generateFile(outPkg string, fileCfg *FileConfig) (string, er
 			}),
 			Id("delegate"): Id("delegate"),
 		})),
+		// for _, o := range options {...}
+		For(Id("_").Op(",").Id("o").Op(":=").Range().Id("options")).Block(
+			Id("o").Call(Id("c").Dot("base")),
+		),
+		Return(Id("c")),
 	))
 
 	// Declare all of our proxy methods
