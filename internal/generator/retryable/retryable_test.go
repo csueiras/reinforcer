@@ -55,7 +55,7 @@ func TestRetryable_Statement(t *testing.T) {
 		var err error
 		r0, err = r.delegate.MyFunction()
 		if r.errorPredicate("MyFunction", err) {
-			return r0, err
+			return err
 		}
 		nonRetryableErr = err
 		return nil
@@ -81,7 +81,7 @@ func TestRetryable_Statement(t *testing.T) {
 		var err error
 		r0, err = r.delegate.MyFunction(ctx, arg1)
 		if r.errorPredicate("MyFunction", err) {
-			return r0, err
+			return err
 		}
 		nonRetryableErr = err
 		return nil

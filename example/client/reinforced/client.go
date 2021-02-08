@@ -5,6 +5,7 @@ package reinforced
 import "context"
 
 type targetClient interface {
+	GenerateGreeting(ctx context.Context, arg1 string) (string, error)
 	SayHello(ctx context.Context, arg1 string) error
 }
 type Client struct {
@@ -30,6 +31,23 @@ func NewClient(delegate targetClient, runnerFactory runnerFactory, options ...Op
 		o(c.base)
 	}
 	return c
+}
+func (c *Client) GenerateGreeting(ctx context.Context, arg1 string) (string, error) {
+	var nonRetryableErr error
+	var r0 string
+	err := c.run(ctx, "GenerateGreeting", func(ctx context.Context) error {
+		var err error
+		r0, err = c.delegate.GenerateGreeting(ctx, arg1)
+		if c.errorPredicate("GenerateGreeting", err) {
+			return err
+		}
+		nonRetryableErr = err
+		return nil
+	})
+	if nonRetryableErr != nil {
+		return r0, nonRetryableErr
+	}
+	return r0, err
 }
 func (c *Client) SayHello(ctx context.Context, arg1 string) error {
 	var nonRetryableErr error
