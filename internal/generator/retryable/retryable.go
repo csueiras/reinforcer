@@ -43,7 +43,16 @@ func (r *Retryable) Statement() (*jen.Statement, error) {
 	), nil
 }
 
-func (r *Retryable) methodCall(params []jen.Code) ([]jen.Code, error) {
+func (r *Retryable) methodCall(paramNames []string) ([]jen.Code, error) {
+	var params []jen.Code
+	for i, j := 0, len(paramNames)-1; i < len(paramNames); i++ {
+		if r.method.HasVariadic && i == j {
+			params = append(params, jen.Id(paramNames[i]).Op("..."))
+		} else {
+			params = append(params, jen.Id(paramNames[i]))
+		}
+	}
+
 	statements := []jen.Code{
 		jen.Var().Id(nonRetryableErrVarName).Id("error"),
 	}

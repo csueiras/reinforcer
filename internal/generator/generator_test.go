@@ -163,6 +163,7 @@ type Service interface {
 	C(ctx context.Context, param1 int, param2 *int32, param3 *User)
 	GetUserID(ctx context.Context, userID string) (string, error)
 	GetUserID2(ctx context.Context, userID *string) (*User, error)
+	HasVariadic(ctx context.Context, fields ...string) error
 }`,
 				},
 			},
@@ -217,6 +218,7 @@ type targetService interface {
 	C(ctx context.Context, arg1 int, arg2 *int32, arg3 *unresilient.User)
 	GetUserID(ctx context.Context, arg1 string) (string, error)
 	GetUserID2(ctx context.Context, arg1 *string) (*unresilient.User, error)
+	HasVariadic(ctx context.Context, arg1 ...string) error
 }
 type GeneratedService struct {
 	*base
@@ -258,7 +260,7 @@ func (g *GeneratedService) GetUserID(ctx context.Context, arg1 string) (string, 
 		var err error
 		r0, err = g.delegate.GetUserID(ctx, arg1)
 		if g.errorPredicate("GetUserID", err) {
-			return r0, err
+			return err
 		}
 		nonRetryableErr = err
 		return nil
@@ -275,7 +277,7 @@ func (g *GeneratedService) GetUserID2(ctx context.Context, arg1 *string) (*unres
 		var err error
 		r0, err = g.delegate.GetUserID2(ctx, arg1)
 		if g.errorPredicate("GetUserID2", err) {
-			return r0, err
+			return err
 		}
 		nonRetryableErr = err
 		return nil
@@ -284,6 +286,22 @@ func (g *GeneratedService) GetUserID2(ctx context.Context, arg1 *string) (*unres
 		return r0, nonRetryableErr
 	}
 	return r0, err
+}
+func (g *GeneratedService) HasVariadic(ctx context.Context, arg1 ...string) error {
+	var nonRetryableErr error
+	err := g.run(ctx, "HasVariadic", func(ctx context.Context) error {
+		var err error
+		err = g.delegate.HasVariadic(ctx, arg1...)
+		if g.errorPredicate("HasVariadic", err) {
+			return err
+		}
+		nonRetryableErr = err
+		return nil
+	})
+	if nonRetryableErr != nil {
+		return nonRetryableErr
+	}
+	return err
 }
 `,
 					},
@@ -304,8 +322,8 @@ func (g *GeneratedService) GetUserID2(ctx context.Context, arg1 *string) (*unres
 			if tt.wantErr {
 				require.Error(t, err)
 			} else {
-				require.NotNil(t, got)
 				require.NoError(t, err)
+				require.NotNil(t, got)
 
 				var expected []string
 				for fileName := range tt.outCode.Files {
