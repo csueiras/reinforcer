@@ -86,10 +86,10 @@ func (r *Retryable) methodCall(params []jen.Code) ([]jen.Code, error) {
 		// r0, r1, ..., err = r.delegate.Fn(args...)
 		jen.List(returnVars...).Op("=").Id(r.receiverName).Dot("delegate").Dot(r.method.Name).Call(params...),
 		// if r.errorPredicate(methodName, err) {
-		//  return r0, r1, ..., err
+		//  return err
 		// }
 		jen.If(jen.Id(r.receiverName).Dot("errorPredicate").Call(jen.Lit(r.method.Name), jen.Id(errVarName))).Block(
-			jen.Return(returnVars...),
+			jen.Return(jen.Id("err")),
 		),
 		// nonRetryableErr = err
 		jen.Id(nonRetryableErrVarName).Op("=").Id(errVarName),
