@@ -2,35 +2,38 @@ package passthrough
 
 import (
 	"github.com/csueiras/reinforcer/internal/generator/method"
-	. "github.com/dave/jennifer/jen"
+	"github.com/dave/jennifer/jen"
 )
 
-type passThrough struct {
+// PassThrough is a code generator that injects no middleware and acts a simple fall through call to the delegate
+type PassThrough struct {
 	method       *method.Method
 	structName   string
 	receiverName string
 }
 
-func NewPassThrough(method *method.Method, structName string, receiverName string) *passThrough {
-	return &passThrough{
+// NewPassThrough is a ctor for PassThrough
+func NewPassThrough(method *method.Method, structName string, receiverName string) *PassThrough {
+	return &PassThrough{
 		method:       method,
 		structName:   structName,
 		receiverName: receiverName,
 	}
 }
 
-func (p *passThrough) Statement() (*Statement, error) {
+// Statement generates the jen.Statement for this retryable method
+func (p *PassThrough) Statement() (*jen.Statement, error) {
 	methodParamNames, methodArgParams := p.method.ParameterNames, p.method.ParametersNameAndType
-	delegateCall := Id(p.receiverName).Dot("delegate").Dot(p.method.Name).Call(methodParamNames...)
+	delegateCall := jen.Id(p.receiverName).Dot("delegate").Dot(p.method.Name).Call(methodParamNames...)
 
-	var block []Code
+	var block []jen.Code
 	if len(p.method.ReturnTypes) > 0 {
-		block = append(block, Return(delegateCall))
+		block = append(block, jen.Return(delegateCall))
 	} else {
 		block = append(block, delegateCall)
 	}
 
-	return Func().Params(Id(p.receiverName).Op("*").Id(p.structName)).Id(p.method.Name).Call(methodArgParams...).Block(
+	return jen.Func().Params(jen.Id(p.receiverName).Op("*").Id(p.structName)).Id(p.method.Name).Call(methodArgParams...).Block(
 		block...,
 	), nil
 }

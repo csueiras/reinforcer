@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
+// LoadingError holds any errors that occurred while loading a package
 type LoadingError struct {
 	Errors []error
 }
@@ -20,26 +21,28 @@ func (l *LoadingError) Error() string {
 	return s.String()
 }
 
-type loader struct {
+// Loader is a utility service for extracting type information from a go package
+type Loader struct {
 	loaderFn func(cfg *packages.Config, patterns ...string) ([]*packages.Package, error)
 }
 
-func Loader() *loader {
-	return &loader{
-		loaderFn: packages.Load,
-	}
+// DefaultLoader creates the default loader
+func DefaultLoader() *Loader {
+	return NewLoader(packages.Load)
 }
 
-func NewLoader(pkgLoader func(cfg *packages.Config, patterns ...string) ([]*packages.Package, error)) *loader {
+// NewLoader creates a loader with the package loader override given in the ctor, this is to aid in testing
+func NewLoader(pkgLoader func(cfg *packages.Config, patterns ...string) ([]*packages.Package, error)) *Loader {
 	if pkgLoader == nil {
 		panic("nil package loader function")
 	}
-	return &loader{
+	return &Loader{
 		loaderFn: pkgLoader,
 	}
 }
 
-func (l *loader) Load(path, targetTypeName string) (*packages.Package, *types.Interface, error) {
+// Load loads the package in path and extracts out the interface type by the name of targetTypeName
+func (l *Loader) Load(path, targetTypeName string) (*packages.Package, *types.Interface, error) {
 	cfg := &packages.Config{Mode: packages.NeedTypes | packages.NeedImports}
 	pkgs, err := l.loaderFn(cfg, path)
 

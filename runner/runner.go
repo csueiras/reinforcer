@@ -34,7 +34,7 @@ func (f *Factory) GetRunner(name string) goresilience.Runner {
 	// Obtain write lock as we need to mutate the underlying map
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	
+
 	// The runner might've been created in between the two synchronized blocks
 	if r, ok := f.runners[name]; ok {
 		return r

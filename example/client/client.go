@@ -8,14 +8,17 @@ import (
 	"math/rand"
 )
 
+// Client is an example service interface that we will generate code for
 type Client interface {
 	SayHello(ctx context.Context, name string) error
 }
 
-type fakeClient struct {
+// FakeClient is a Client implementation that will randomly fail
+type FakeClient struct {
 }
 
-func (f *fakeClient) SayHello(_ context.Context, name string) error {
+// SayHello is a method that will randomly return an error otherwise it will print a nice greeting
+func (f *FakeClient) SayHello(_ context.Context, name string) error {
 	if rand.Int()%10 == 5 {
 		return fmt.Errorf("random failure")
 	}
@@ -23,6 +26,7 @@ func (f *fakeClient) SayHello(_ context.Context, name string) error {
 	return nil
 }
 
-func NewClient() *fakeClient {
-	return &fakeClient{}
+// NewClient is a ctor for fakeClient
+func NewClient() *FakeClient {
+	return &FakeClient{}
 }
