@@ -9,6 +9,49 @@ Reinforcer is a code generation tool that automates middleware injection in a pr
 implementation, this aids in building more resilient code as you can use common resiliency patterns in the middlewares
 such as circuit breakers, retrying, timeouts and others.
 
-This tool is under heavy development, not yet recommended for production use.
+**NOTE:** _This tool is under heavy development, not yet recommended for production use._
 
-More details will be added.
+## Usage
+
+1. Describe the target that you want to generate code for:
+
+```
+type Client interface {
+	DoOperation(ctx context.Context, arg string) error
+}
+```
+
+2. Create the runner/middleware factory with the middlewares you want to inject into the generated code:
+
+```
+r := runner.NewFactory(
+    metrics.NewMiddleware(...),
+    circuitbreaker.NewMiddleware(...),
+    bulkhead.NewMiddleware(...),
+    retry.NewMiddleware(...),
+    timeout.NewMiddleware(...),
+)
+```
+
+3. Optionally create your predicate for errors that shouldn't be retried
+
+```
+errPredicate := func(method string, err error) bool {
+    if method == "DoOperation" && errors.Is(client.NotFound, err) {
+        return false
+    }
+    return true
+}
+```
+
+4. Wrap the "real"/unrealiable implementation in the generated code:
+
+```
+c := client.NewClient(...)
+
+// reinforcedClient implements the target interface so it can now be used in lieau of any place where the unreliable
+// client was used
+reinforcedClient := reinforced.NewClient(c, r, reinforced.WithRetryableErrorPredicate(errPredicate))
+```
+
+A complete example is [here](./example/main.go) 
