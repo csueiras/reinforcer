@@ -347,12 +347,9 @@ func (g *GeneratedService) HasVariadic(ctx context.Context, arg1 ...string) erro
 
 func loadInterface(t *testing.T, filesCode map[string]input) map[string]*generator.FileConfig {
 	pkg := "github.com/csueiras/fake/unresilient"
-	var interfaces []string
-
 	m := map[string]interface{}{}
 	for fileName, in := range filesCode {
 		m[fileName] = in.code
-		interfaces = append(interfaces, in.interfaceName)
 	}
 
 	mods := []packagestest.Module{

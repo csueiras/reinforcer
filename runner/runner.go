@@ -8,7 +8,6 @@ import (
 // Factory of runners
 type Factory struct {
 	mu          sync.RWMutex
-	mr          sync.Map
 	runners     map[string]goresilience.Runner
 	middlewares []goresilience.Middleware
 }
