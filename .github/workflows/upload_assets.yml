@@ -17,9 +17,9 @@ jobs:
       - name: build
         run: |
           echo "GO111MODULE=on" >> $GITHUB_ENV
-          GOOS=windows GOARCH=amd64 go build -o bin/ci-test-windows-amd64.exe
-          GOOS=linux   GOARCH=amd64 go build -o bin/ci-test-linux-amd64
-          GOOS=darwin  GOARCH=amd64 go build -o bin/ci-test-macos-amd64
+          GOOS=windows GOARCH=amd64 go build -o bin/reinforcer-windows-amd64.exe ./cmd/reinforcer
+          GOOS=linux   GOARCH=amd64 go build -o bin/reinforcer-linux-amd64 ./cmd/reinforcer
+          GOOS=darwin  GOARCH=amd64 go build -o bin/reinforcer-macos-amd64 ./cmd/reinforcer
       - name: upload artifacts
         uses: actions/upload-artifact@master
         with:
@@ -52,9 +52,9 @@ jobs:
           SOURCE_TAG: ${{ steps.branch_name.outputs.SOURCE_TAG }}
         run: |
           mkdir assets
-          zip assets/ci-test-${SOURCE_TAG}-windows-amd64.zip bin/ci-test-windows-amd64.exe README.md
-          zip assets/ci-test-${SOURCE_TAG}-linux-amd64.zip bin/ci-test-linux-amd64 README.md
-          zip assets/ci-test-${SOURCE_TAG}-darwin-amd64.zip bin/ci-test-darwin-amd64 README.md
+          zip assets/reinforcer-${SOURCE_TAG}-windows-amd64.zip bin/reinforcer-windows-amd64.exe README.md
+          zip assets/reinforcer-${SOURCE_TAG}-linux-amd64.zip bin/reinforcer-linux-amd64 README.md
+          zip assets/reinforcer-${SOURCE_TAG}-darwin-amd64.zip bin/reinforcer-darwin-amd64 README.md
           sha256sum assets/*zip > assets/SHASUMS256.txt
 
       - name: Upload release assets
