@@ -37,6 +37,9 @@ import (
 	"github.com/spf13/viper"
 )
 
+// Version will be set in CI to the current released version
+var Version = "0.0.0"
+
 var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
 var matchAllCap = regexp.MustCompile("([a-z0-9])([A-Z])")
 var cfgFile string
@@ -51,6 +54,11 @@ such as circuit breaker, retries, timeouts, etc.
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		flags := cmd.Flags()
+		if showVersion, _ := flags.GetBool("version"); showVersion {
+			fmt.Println(Version)
+			return nil
+		}
+
 		src, _ := flags.GetString("src")
 		sourceTypeName, _ := cmd.Flags().GetString("name")
 		outPkg, _ := flags.GetString("outpkg")
@@ -133,7 +141,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.reinforcer.yaml)")
 
 	flags := rootCmd.Flags()
-
+	flags.Bool("version", false, "show reinforcer's version")
 	flags.String("name", "", "name of interface to generate reinforcer's proxy for")
 	flags.String("src", defSrcFile, "source file to scan for the target interface. If unspecified the file pointed by the env variable GOFILE will be used.")
 	flags.String("outputdir", "./reinforced", "directory to write the generated code to")
