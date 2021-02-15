@@ -1,16 +1,16 @@
-package passthrough_test
+package noret_test
 
 import (
 	"bytes"
 	"github.com/csueiras/reinforcer/internal/generator/method"
-	"github.com/csueiras/reinforcer/internal/generator/passthrough"
+	"github.com/csueiras/reinforcer/internal/generator/noret"
 	"github.com/stretchr/testify/require"
 	"go/token"
 	"go/types"
 	"testing"
 )
 
-func TestPassThrough_Statement(t *testing.T) {
+func TestNoReturn_Statement(t *testing.T) {
 	ctxVar := types.NewVar(token.NoPos, nil, "ctx", method.ContextType)
 
 	tests := []struct {
@@ -21,35 +21,35 @@ func TestPassThrough_Statement(t *testing.T) {
 		wantErr    bool
 	}{
 		{
-			name:       "Function arguments and returns",
-			methodName: "MyFunction",
-			signature: types.NewSignature(nil, types.NewTuple(
-				ctxVar,
-				types.NewVar(token.NoPos, nil, "myArg", types.Typ[types.String]),
-			), types.NewTuple(types.NewVar(token.NoPos, nil, "", types.Typ[types.String])), false),
-			want: `func (r *resilient) MyFunction(ctx context.Context, arg1 string) {
-	return r.delegate.MyFunction(ctx, arg1)
-}`,
-			wantErr: false,
-		},
-		{
-			name:       "Function passes arguments",
-			methodName: "MyFunction",
-			signature: types.NewSignature(nil, types.NewTuple(
-				ctxVar,
-				types.NewVar(token.NoPos, nil, "myArg", types.Typ[types.String]),
-			), types.NewTuple(types.NewVar(token.NoPos, nil, "", types.Typ[types.String])), false),
-			want: `func (r *resilient) MyFunction(ctx context.Context, arg1 string) {
-	return r.delegate.MyFunction(ctx, arg1)
-}`,
-			wantErr: false,
-		},
-		{
-			name:       "Function no args no return",
+			name:       "MyFunction()",
 			methodName: "MyFunction",
 			signature:  types.NewSignature(nil, types.NewTuple(), types.NewTuple(), false),
 			want: `func (r *resilient) MyFunction() {
-	r.delegate.MyFunction()
+	err := r.run(context.Background(), "MyFunction", func(_ context.Context) error {
+		r.delegate.MyFunction()
+		return nil
+	})
+	if err != nil {
+		panic(err)
+	}
+}`,
+			wantErr: false,
+		},
+		{
+			name:       "MyFunction(ctx context.Context, arg1 string)",
+			methodName: "MyFunction",
+			signature: types.NewSignature(nil, types.NewTuple(
+				ctxVar,
+				types.NewVar(token.NoPos, nil, "myArg", types.Typ[types.String]),
+			), types.NewTuple(types.NewVar(token.NoPos, nil, "", types.Typ[types.String])), false),
+			want: `func (r *resilient) MyFunction(ctx context.Context, arg1 string) {
+	err := r.run(ctx, "MyFunction", func(ctx context.Context) error {
+		r.delegate.MyFunction(ctx, arg1)
+		return nil
+	})
+	if err != nil {
+		panic(err)
+	}
 }`,
 			wantErr: false,
 		},
@@ -59,7 +59,7 @@ func TestPassThrough_Statement(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m, err := method.ParseMethod(tt.methodName, tt.signature)
 			require.NoError(t, err)
-			ret := passthrough.NewPassThrough(m, "resilient", "r")
+			ret := noret.NewNoReturn(m, "resilient", "r")
 			buf := &bytes.Buffer{}
 			s, err := ret.Statement()
 			if tt.wantErr {
@@ -71,6 +71,7 @@ func TestPassThrough_Statement(t *testing.T) {
 				require.NoError(t, renderErr)
 
 				got := buf.String()
+				//fmt.Print(got)
 				require.Equal(t, tt.want, got)
 			}
 		})

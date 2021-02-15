@@ -33,7 +33,7 @@ import (
 	"regexp"
 	"strings"
 
-	homedir "github.com/mitchellh/go-homedir"
+	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
 )
 
@@ -136,6 +136,7 @@ func init() {
 	flags.String("src", defSrcFile, "source file to scan for the target interface. If unspecified the file pointed by the env variable GOFILE will be used.")
 	flags.String("outputdir", "./reinforced", "directory to write the generated code to")
 	flags.String("outpkg", "reinforced", "name of generated package")
+	flags.Bool("ignorenoret", false, "ignores methods that don't return anything (they won't be wrapped in the middleware). By default they'll be wrapped in a middleware and if the middleware emits an error the call will panic.")
 }
 
 // initConfig reads in config file and ENV variables if set.

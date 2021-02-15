@@ -2,7 +2,6 @@ package method_test
 
 import (
 	"github.com/csueiras/reinforcer/internal/generator/method"
-	"github.com/csueiras/reinforcer/internal/generator/utils"
 	"github.com/dave/jennifer/jen"
 	"github.com/stretchr/testify/require"
 	"go/token"
@@ -11,7 +10,7 @@ import (
 )
 
 func TestNewMethod(t *testing.T) {
-	ctxVar := types.NewVar(token.NoPos, nil, "ctx", utils.ContextType)
+	ctxVar := types.NewVar(token.NoPos, nil, "ctx", method.ContextType)
 	zero := new(int)
 	*zero = 0
 
@@ -105,7 +104,7 @@ func TestNewMethod(t *testing.T) {
 				signature: types.NewSignature(nil, types.NewTuple(
 					ctxVar,
 					types.NewVar(token.NoPos, nil, "myArg", types.Typ[types.String]),
-				), types.NewTuple(types.NewVar(token.NoPos, nil, "", utils.ErrType)), false),
+				), types.NewTuple(types.NewVar(token.NoPos, nil, "", method.ErrType)), false),
 			},
 			want: &method.Method{
 				Name:                  "Fn",
@@ -125,7 +124,7 @@ func TestNewMethod(t *testing.T) {
 					types.NewVar(token.NoPos, nil, "myArg", types.Typ[types.String]),
 				), types.NewTuple(
 					types.NewVar(token.NoPos, nil, "", types.Typ[types.String]),
-					types.NewVar(token.NoPos, nil, "", utils.ErrType),
+					types.NewVar(token.NoPos, nil, "", method.ErrType),
 				), false),
 			},
 			want: &method.Method{

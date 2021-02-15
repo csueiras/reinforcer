@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/csueiras/reinforcer/internal/generator/method"
+	"github.com/csueiras/reinforcer/internal/generator/noret"
 	"github.com/csueiras/reinforcer/internal/generator/passthrough"
 	"github.com/csueiras/reinforcer/internal/generator/retryable"
 	"github.com/dave/jennifer/jen"
@@ -40,6 +41,8 @@ type Config struct {
 	OutPkg string
 	// Files holds the code generation configuration for every file being processed
 	Files map[string]*FileConfig
+	// IgnoreNoReturnMethods determines whether methods that don't return anything should be wrapped in the middleware or not.
+	IgnoreNoReturnMethods bool
 }
 
 // GeneratedFile contains the code generation output for a specific type
@@ -48,6 +51,10 @@ type GeneratedFile struct {
 	TypeName string
 	// Contents is the golang code that was generated
 	Contents string
+}
+
+type statement interface {
+	Statement() (*jen.Statement, error)
 }
 
 // Generated contains the code generation out for all the processed types
@@ -75,7 +82,7 @@ func Generate(cfg Config) (*Generated, error) {
 	}
 
 	for fileName, fileConfig := range cfg.Files {
-		s, err := generateFile(cfg.OutPkg, fileConfig)
+		s, err := generateFile(cfg.OutPkg, cfg.IgnoreNoReturnMethods, fileConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -90,7 +97,7 @@ func Generate(cfg Config) (*Generated, error) {
 
 // generateFile generates the proxy code for the given interface, the interface must have at least one method returning an
 // error as those are the only ones wrapped in the middleware
-func generateFile(outPkg string, fileCfg *FileConfig) (string, error) {
+func generateFile(outPkg string, ignoreNoReturnMethods bool, fileCfg *FileConfig) (string, error) {
 	if fileCfg == nil {
 		return "", fmt.Errorf("nil config")
 	}
@@ -160,7 +167,12 @@ func generateFile(outPkg string, fileCfg *FileConfig) (string, error) {
 			}
 			f.Add(s)
 		} else {
-			p := passthrough.NewPassThrough(mm, fileCfg.OutTypeName, fileCfg.receiverName())
+			var p statement
+			if ignoreNoReturnMethods {
+				p = passthrough.NewPassThrough(mm, fileCfg.OutTypeName, fileCfg.receiverName())
+			} else {
+				p = noret.NewNoReturn(mm, fileCfg.OutTypeName, fileCfg.receiverName())
+			}
 			s, err := p.Statement()
 			if err != nil {
 				return "", err
