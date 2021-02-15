@@ -55,6 +55,7 @@ such as circuit breaker, retries, timeouts, etc.
 		sourceTypeName, _ := cmd.Flags().GetString("name")
 		outPkg, _ := flags.GetString("outpkg")
 		outDir, _ := flags.GetString("outputdir")
+		ignoreNoRet, _ := flags.GetBool("ignorenoret")
 
 		if !path.IsAbs(outDir) {
 			cwd, err := os.Getwd()
@@ -77,7 +78,8 @@ such as circuit breaker, retries, timeouts, etc.
 		}
 
 		code, err := generator.Generate(generator.Config{
-			OutPkg: outPkg,
+			OutPkg:                outPkg,
+			IgnoreNoReturnMethods: ignoreNoRet,
 			Files: map[string]*generator.FileConfig{
 				src: {
 					SrcTypeName:   sourceTypeName,
