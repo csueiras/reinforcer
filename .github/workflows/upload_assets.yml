@@ -57,7 +57,7 @@ jobs:
           mkdir assets
           zip assets/reinforcer-${SOURCE_TAG}-windows-amd64.zip bin/reinforcer-windows-amd64.exe README.md
           zip assets/reinforcer-${SOURCE_TAG}-linux-amd64.zip bin/reinforcer-linux-amd64 README.md
-          zip assets/reinforcer-${SOURCE_TAG}-darwin-amd64.zip bin/reinforcer-darwin-amd64 README.md
+          zip assets/reinforcer-${SOURCE_TAG}-darwin-amd64.zip bin/reinforcer-macos-amd64 README.md
           sha256sum assets/*zip > assets/SHASUMS256.txt
 
       - name: Upload release assets
