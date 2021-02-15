@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"github.com/csueiras/reinforcer/internal/generator/method"
 	"github.com/csueiras/reinforcer/internal/generator/retryable"
-	"github.com/csueiras/reinforcer/internal/generator/utils"
 	"github.com/stretchr/testify/require"
 	"go/token"
 	"go/types"
@@ -12,8 +11,8 @@ import (
 )
 
 func TestRetryable_Statement(t *testing.T) {
-	errVar := types.NewVar(token.NoPos, nil, "", utils.ErrType)
-	ctxVar := types.NewVar(token.NoPos, nil, "ctx", utils.ContextType)
+	errVar := types.NewVar(token.NoPos, nil, "", method.ErrType)
+	ctxVar := types.NewVar(token.NoPos, nil, "ctx", method.ContextType)
 
 	tests := []struct {
 		name       string

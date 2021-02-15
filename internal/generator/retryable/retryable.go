@@ -8,7 +8,6 @@ import (
 
 const (
 	errVarName             = "err"
-	ctxVarName             = "ctx"
 	nonRetryableErrVarName = "nonRetryableErr"
 )
 
@@ -34,7 +33,7 @@ func NewRetryable(method *method.Method, structName string, receiverName string)
 
 // Statement generates the jen.Statement for this retryable method
 func (r *Retryable) Statement() (*jen.Statement, error) {
-	methodCallStatements, err := r.methodCall(r.method.ParameterNames)
+	methodCallStatements, err := r.methodCall()
 	if err != nil {
 		return nil, err
 	}
@@ -43,15 +42,8 @@ func (r *Retryable) Statement() (*jen.Statement, error) {
 	), nil
 }
 
-func (r *Retryable) methodCall(paramNames []string) ([]jen.Code, error) {
-	var params []jen.Code
-	for i, j := 0, len(paramNames)-1; i < len(paramNames); i++ {
-		if r.method.HasVariadic && i == j {
-			params = append(params, jen.Id(paramNames[i]).Op("..."))
-		} else {
-			params = append(params, jen.Id(paramNames[i]))
-		}
-	}
+func (r *Retryable) methodCall() ([]jen.Code, error) {
+	params := r.method.Parameters()
 
 	statements := []jen.Code{
 		jen.Var().Id(nonRetryableErrVarName).Id("error"),
@@ -77,16 +69,7 @@ func (r *Retryable) methodCall(paramNames []string) ([]jen.Code, error) {
 		statements = append(statements, jen.Var().Id(varName).Add(r.method.ReturnTypes[i]))
 	}
 
-	ctxParamName := ctxVarName
-	var ctxParam jen.Code
-	if r.method.HasContext {
-		// Passes down the context if one is present in the signature
-		ctxParam = jen.Id(ctxVarName)
-	} else {
-		// Use context.Background() if no context is present in signature
-		ctxParam = contextBackground()
-		ctxParamName = "_"
-	}
+	ctxParamName, ctxParam := r.method.ContextParam()
 
 	// anonymous function passed to the middleware
 	call := jen.Func().Call(jen.Id(ctxParamName).Qual("context", "Context")).Params(jen.Id("error")).Block(
@@ -123,8 +106,4 @@ func (r *Retryable) methodCall(paramNames []string) ([]jen.Code, error) {
 	statements = append(statements, jen.Return(returnVars...))
 
 	return statements, nil
-}
-
-func contextBackground() jen.Code {
-	return jen.Qual("context", "Background").Call()
 }

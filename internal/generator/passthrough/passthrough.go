@@ -23,15 +23,8 @@ func NewPassThrough(method *method.Method, structName string, receiverName strin
 
 // Statement generates the jen.Statement for this retryable method
 func (p *PassThrough) Statement() (*jen.Statement, error) {
-	methodParamNames, methodArgParams := p.method.ParameterNames, p.method.ParametersNameAndType
-	var params []jen.Code
-	for i, j := 0, len(methodParamNames)-1; i < len(methodParamNames); i++ {
-		if p.method.HasVariadic && i == j {
-			params = append(params, jen.Id(methodParamNames[i]).Op("..."))
-		} else {
-			params = append(params, jen.Id(methodParamNames[i]))
-		}
-	}
+	methodArgParams := p.method.ParametersNameAndType
+	params := p.method.Parameters()
 	delegateCall := jen.Id(p.receiverName).Dot("delegate").Dot(p.method.Name).Call(params...)
 
 	var block []jen.Code
