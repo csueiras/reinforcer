@@ -1,0 +1,63 @@
+project_name: reinforcer
+before:
+  hooks:
+    - go mod download
+
+builds:
+  - binary: reinforcer
+    env: [CGO_ENABLED=0]
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - replacements:
+      darwin: Darwin
+      linux: Linux
+      windows: Windows
+      386: i386
+      amd64: x86_64
+    files:
+      - README.md
+      - LICENSE
+
+checksum:
+  name_template: "checksum.txt"
+
+snapshot:
+  name_template: "{{ .Tag }}-next"
+
+changelog:
+  sort: asc
+
+dockers:
+  - goos: linux
+    goarch: amd64
+    binaries:
+      - reinforcer
+    image_templates:
+      - 'csueiras/reinforcer:{{ .Tag }}'
+      - 'csueiras/reinforcer:v{{ .Major }}'
+      - 'csueiras/reinforcer:v{{ .Major }}.{{ .Minor }}'
+      - 'csueiras/reinforcer:latest'
+    build_flag_templates:
+      - "--pull"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.name={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.source={{.GitURL}}"
+
+brews:
+  - homepage: https://github.com/csueiras/reinforcer
+    description: "A codegen tool for easy adoption of resiliency patterns in Go"
+    github:
+      owner: csueiras
+      name: homebrew-reinforcer
+    folder: Formula
+    test: |
+      system "#{bin}reinforcer --version"
