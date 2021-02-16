@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/csueiras/reinforcer/example/client"
 	"github.com/csueiras/reinforcer/example/client/reinforced"
-	"github.com/csueiras/reinforcer/runner"
+	"github.com/csueiras/reinforcer/pkg/runner"
 	"github.com/slok/goresilience/retry"
 	"github.com/slok/goresilience/timeout"
 	"time"
