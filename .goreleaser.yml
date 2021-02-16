@@ -41,7 +41,7 @@ changelog:
 dockers:
   - goos: linux
     goarch: amd64
-    binaries:
+    ids:
       - reinforcer
     image_templates:
       - 'csueiras/reinforcer:{{ .Tag }}'

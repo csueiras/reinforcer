@@ -11,6 +11,28 @@ such as circuit breakers, retrying, timeouts and others.
 
 **NOTE:** _This tool is under heavy development, not yet recommended for production use._
 
+## Install
+
+### Releases
+
+Visit the [releases page](https://github.com/csueiras/reinforcer/releases) for pre-built binaries for OS X, Linux and Windows.
+
+### Docker
+
+Use the [Docker Image](https://hub.docker.com/r/csueiras/reinforcer):
+
+```
+docker pull csueiras/reinforcer
+```
+
+### Homebrew
+
+Install through [Homebrew](https://brew.sh/)
+
+```
+brew tap csueiras/reinforcer && brew install reinforcer
+```
+
 ## Usage
 
 1. Describe the target that you want to generate code for:
