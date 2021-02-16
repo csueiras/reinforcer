@@ -27,10 +27,10 @@ func TestRetryable_Statement(t *testing.T) {
 			signature:  types.NewSignature(nil, types.NewTuple(), types.NewTuple(errVar), false),
 			want: `func (r *resilient) MyFunction() error {
 	var nonRetryableErr error
-	err := r.run(context.Background(), "MyFunction", func(_ context.Context) error {
+	err := r.run(context.Background(), ParentMethods.MyFunction, func(_ context.Context) error {
 		var err error
 		err = r.delegate.MyFunction()
-		if r.errorPredicate("MyFunction", err) {
+		if r.errorPredicate(ParentMethods.MyFunction, err) {
 			return err
 		}
 		nonRetryableErr = err
@@ -50,10 +50,10 @@ func TestRetryable_Statement(t *testing.T) {
 			want: `func (r *resilient) MyFunction() (string, error) {
 	var nonRetryableErr error
 	var r0 string
-	err := r.run(context.Background(), "MyFunction", func(_ context.Context) error {
+	err := r.run(context.Background(), ParentMethods.MyFunction, func(_ context.Context) error {
 		var err error
 		r0, err = r.delegate.MyFunction()
-		if r.errorPredicate("MyFunction", err) {
+		if r.errorPredicate(ParentMethods.MyFunction, err) {
 			return err
 		}
 		nonRetryableErr = err
@@ -76,10 +76,10 @@ func TestRetryable_Statement(t *testing.T) {
 			want: `func (r *resilient) MyFunction(ctx context.Context, arg1 string) (string, error) {
 	var nonRetryableErr error
 	var r0 string
-	err := r.run(ctx, "MyFunction", func(ctx context.Context) error {
+	err := r.run(ctx, ParentMethods.MyFunction, func(ctx context.Context) error {
 		var err error
 		r0, err = r.delegate.MyFunction(ctx, arg1)
-		if r.errorPredicate("MyFunction", err) {
+		if r.errorPredicate(ParentMethods.MyFunction, err) {
 			return err
 		}
 		nonRetryableErr = err
@@ -96,7 +96,7 @@ func TestRetryable_Statement(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m, err := method.ParseMethod(tt.methodName, tt.signature)
+			m, err := method.ParseMethod("Parent", tt.methodName, tt.signature)
 			require.NoError(t, err)
 			ret := retryable.NewRetryable(m, "resilient", "r")
 			buf := &bytes.Buffer{}
@@ -117,7 +117,7 @@ func TestRetryable_Statement(t *testing.T) {
 
 	t.Run("Function does not return error", func(t *testing.T) {
 		require.Panics(t, func() {
-			m, err := method.ParseMethod("Fn", types.NewSignature(nil, types.NewTuple(), types.NewTuple(), false))
+			m, err := method.ParseMethod("Parent", "Fn", types.NewSignature(nil, types.NewTuple(), types.NewTuple(), false))
 			require.NoError(t, err)
 			retryable.NewRetryable(m, "resilient", "r")
 		})
