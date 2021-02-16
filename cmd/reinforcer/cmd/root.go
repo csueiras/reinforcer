@@ -100,20 +100,29 @@ such as circuit breaker, retries, timeouts, etc.
 			return err
 		}
 
-		w := path.Join(outDir, "reinforcer_common.go")
-		if err := ioutil.WriteFile(w, []byte(code.Common), 0755); err != nil {
-			return fmt.Errorf("failed to write to %s; error=%w", w, err)
+		if err := saveTo(path.Join(outDir, "reinforcer_common.go"), code.Common); err != nil {
+			return err
+		}
+
+		if err := saveTo(path.Join(outDir, "reinforcer_constants.go"), code.Constants); err != nil {
+			return err
 		}
 
 		for _, codegen := range code.Files {
-			w = path.Join(outDir, toSnakeCase(codegen.TypeName)+".go")
-			if err := ioutil.WriteFile(w, []byte(codegen.Contents), 0755); err != nil {
-				return fmt.Errorf("failed to write to %s; error=%w", w, err)
+			if err := saveTo(path.Join(outDir, toSnakeCase(codegen.TypeName)+".go"), codegen.Contents); err != nil {
+				return err
 			}
 		}
 
 		return nil
 	},
+}
+
+func saveTo(path string, contents string) error {
+	if err := ioutil.WriteFile(path, []byte(contents), 0755); err != nil {
+		return fmt.Errorf("failed to write to %s; error=%w", path, err)
+	}
+	return nil
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

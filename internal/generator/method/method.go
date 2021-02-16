@@ -44,6 +44,7 @@ func init() {
 
 // Method holds all of the data for code generation on a specific method signature
 type Method struct {
+	ParentTypeName        string
 	Name                  string
 	HasContext            bool
 	ReturnsError          bool
@@ -53,6 +54,12 @@ type Method struct {
 	ReturnTypes           []jen.Code
 	ContextParameter      *int
 	ReturnErrorIndex      *int
+}
+
+// ConstantRef is the reference to the constant for this method's name
+func (m *Method) ConstantRef() jen.Code {
+	constantsStructName := fmt.Sprintf("%sMethods", m.ParentTypeName)
+	return jen.Id(constantsStructName).Dot(m.Name)
 }
 
 // ContextParam generates the param name and type for a context arg for the given method
@@ -83,8 +90,9 @@ func (m *Method) Parameters() []jen.Code {
 }
 
 // ParseMethod parses the given types.Signature and generates a Method
-func ParseMethod(name string, signature *types.Signature) (*Method, error) {
+func ParseMethod(parentTypeName, name string, signature *types.Signature) (*Method, error) {
 	m := &Method{
+		ParentTypeName:   parentTypeName,
 		Name:             name,
 		ReturnErrorIndex: nil,
 		ContextParameter: nil,

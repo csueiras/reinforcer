@@ -1,6 +1,7 @@
 package method_test
 
 import (
+	"fmt"
 	"github.com/csueiras/reinforcer/internal/generator/method"
 	"github.com/dave/jennifer/jen"
 	"github.com/stretchr/testify/require"
@@ -157,7 +158,7 @@ func TestNewMethod(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := method.ParseMethod(tt.args.name, tt.args.signature)
+			got, err := method.ParseMethod("ParentType", tt.args.name, tt.args.signature)
 			require.NoError(t, err)
 			require.Equal(t, tt.want.Name, got.Name)
 			require.Equal(t, tt.want.HasContext, got.HasContext)
@@ -171,6 +172,7 @@ func TestNewMethod(t *testing.T) {
 			require.ElementsMatch(t, tt.want.ParameterNames, got.ParameterNames)
 			require.ElementsMatch(t, tt.want.ParametersNameAndType, got.ParametersNameAndType)
 			require.ElementsMatch(t, tt.want.ReturnTypes, got.ReturnTypes)
+			require.Equal(t, fmt.Sprintf("ParentTypeMethods.%s", tt.want.Name), (got.ConstantRef().(*jen.Statement)).GoString())
 		})
 	}
 }

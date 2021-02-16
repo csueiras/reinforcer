@@ -57,10 +57,18 @@ type statement interface {
 	Statement() (*jen.Statement, error)
 }
 
+type fileMeta struct {
+	fileName   string
+	fileConfig *FileConfig
+	methods    []*method.Method
+}
+
 // Generated contains the code generation out for all the processed types
 type Generated struct {
 	// Common is the golang code that is shared across all generated types
 	Common string
+	// Constants is the golang code that holds constants for compile-time safe references to the proxied methods
+	Constants string
 	// Files is the golang code that was generated for every type that was processed
 	Files map[string]*GeneratedFile
 }
@@ -81,8 +89,14 @@ func Generate(cfg Config) (*Generated, error) {
 		Files:  make(map[string]*GeneratedFile),
 	}
 
+	var fileMethods []*fileMeta
+
 	for fileName, fileConfig := range cfg.Files {
-		s, err := generateFile(cfg.OutPkg, cfg.IgnoreNoReturnMethods, fileConfig)
+		methods, err := parseMethods(fileConfig.OutTypeName, fileConfig.InterfaceType)
+		if err != nil {
+			return nil, err
+		}
+		s, err := generateFile(cfg.OutPkg, cfg.IgnoreNoReturnMethods, fileConfig, methods)
 		if err != nil {
 			return nil, err
 		}
@@ -90,23 +104,21 @@ func Generate(cfg Config) (*Generated, error) {
 			TypeName: fileConfig.OutTypeName,
 			Contents: s,
 		}
+		fileMethods = append(fileMethods, &fileMeta{fileName: fileName, fileConfig: fileConfig, methods: methods})
 	}
+
+	consts, err := generateConstants(cfg.OutPkg, fileMethods)
+	if err != nil {
+		return nil, err
+	}
+	gen.Constants = consts
 
 	return gen, nil
 }
 
 // generateFile generates the proxy code for the given interface, the interface must have at least one method returning an
 // error as those are the only ones wrapped in the middleware
-func generateFile(outPkg string, ignoreNoReturnMethods bool, fileCfg *FileConfig) (string, error) {
-	if fileCfg == nil {
-		return "", fmt.Errorf("nil config")
-	}
-
-	methods, err := parseMethods(fileCfg.InterfaceType)
-	if err != nil {
-		return "", err
-	}
-
+func generateFile(outPkg string, ignoreNoReturnMethods bool, fileCfg *FileConfig, methods []*method.Method) (string, error) {
 	f := jen.NewFile(outPkg)
 	f.HeaderComment(fileHeader)
 
@@ -224,12 +236,38 @@ func generateCommon(outPkg string) (string, error) {
 	return renderToString(f)
 }
 
-func parseMethods(interfaceType *types.Interface) ([]*method.Method, error) {
+func generateConstants(outPkg string, meta []*fileMeta) (string, error) {
+	f := jen.NewFile(outPkg)
+	f.HeaderComment(fileHeader)
+
+	for _, fm := range meta {
+		var fields []jen.Code
+		var constantAssign []jen.Code
+		for _, m := range fm.methods {
+			fields = append(fields, jen.Id(m.Name).Id("string"))
+			constantAssign = append(constantAssign, jen.Id(m.Name).Op(":").Lit(m.Name).Op(","))
+		}
+
+		constObjName := fmt.Sprintf("%sMethods", fm.fileConfig.OutTypeName)
+		f.Add(jen.Comment(fmt.Sprintf("%s are the methods in %s", constObjName, fm.fileConfig.OutTypeName)))
+		f.Add(
+			jen.Var().Id(constObjName).Op("=").Struct(
+				fields...,
+			).Block(
+				constantAssign...,
+			),
+		)
+	}
+
+	return renderToString(f)
+}
+
+func parseMethods(typeName string, interfaceType *types.Interface) ([]*method.Method, error) {
 	anyErrorReturningMethod := false
 	var methods []*method.Method
 	for m := 0; m < interfaceType.NumMethods(); m++ {
 		meth := interfaceType.Method(m)
-		mm, err := method.ParseMethod(meth.Name(), meth.Type().(*types.Signature))
+		mm, err := method.ParseMethod(typeName, meth.Name(), meth.Type().(*types.Signature))
 		if err != nil {
 			return nil, err
 		}

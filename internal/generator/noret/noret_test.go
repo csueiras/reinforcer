@@ -25,7 +25,7 @@ func TestNoReturn_Statement(t *testing.T) {
 			methodName: "MyFunction",
 			signature:  types.NewSignature(nil, types.NewTuple(), types.NewTuple(), false),
 			want: `func (r *resilient) MyFunction() {
-	err := r.run(context.Background(), "MyFunction", func(_ context.Context) error {
+	err := r.run(context.Background(), ParentMethods.MyFunction, func(_ context.Context) error {
 		r.delegate.MyFunction()
 		return nil
 	})
@@ -43,7 +43,7 @@ func TestNoReturn_Statement(t *testing.T) {
 				types.NewVar(token.NoPos, nil, "myArg", types.Typ[types.String]),
 			), types.NewTuple(types.NewVar(token.NoPos, nil, "", types.Typ[types.String])), false),
 			want: `func (r *resilient) MyFunction(ctx context.Context, arg1 string) {
-	err := r.run(ctx, "MyFunction", func(ctx context.Context) error {
+	err := r.run(ctx, ParentMethods.MyFunction, func(ctx context.Context) error {
 		r.delegate.MyFunction(ctx, arg1)
 		return nil
 	})
@@ -57,7 +57,7 @@ func TestNoReturn_Statement(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m, err := method.ParseMethod(tt.methodName, tt.signature)
+			m, err := method.ParseMethod("Parent", tt.methodName, tt.signature)
 			require.NoError(t, err)
 			ret := noret.NewNoReturn(m, "resilient", "r")
 			buf := &bytes.Buffer{}

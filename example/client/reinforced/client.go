@@ -35,10 +35,10 @@ func NewClient(delegate targetClient, runnerFactory runnerFactory, options ...Op
 func (c *Client) GenerateGreeting(ctx context.Context, arg1 string) (string, error) {
 	var nonRetryableErr error
 	var r0 string
-	err := c.run(ctx, "GenerateGreeting", func(ctx context.Context) error {
+	err := c.run(ctx, ClientMethods.GenerateGreeting, func(ctx context.Context) error {
 		var err error
 		r0, err = c.delegate.GenerateGreeting(ctx, arg1)
-		if c.errorPredicate("GenerateGreeting", err) {
+		if c.errorPredicate(ClientMethods.GenerateGreeting, err) {
 			return err
 		}
 		nonRetryableErr = err
@@ -51,10 +51,10 @@ func (c *Client) GenerateGreeting(ctx context.Context, arg1 string) (string, err
 }
 func (c *Client) SayHello(ctx context.Context, arg1 string) error {
 	var nonRetryableErr error
-	err := c.run(ctx, "SayHello", func(ctx context.Context) error {
+	err := c.run(ctx, ClientMethods.SayHello, func(ctx context.Context) error {
 		var err error
 		err = c.delegate.SayHello(ctx, arg1)
-		if c.errorPredicate("SayHello", err) {
+		if c.errorPredicate(ClientMethods.SayHello, err) {
 			return err
 		}
 		nonRetryableErr = err

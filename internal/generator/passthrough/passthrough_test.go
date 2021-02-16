@@ -57,7 +57,7 @@ func TestPassThrough_Statement(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m, err := method.ParseMethod(tt.methodName, tt.signature)
+			m, err := method.ParseMethod("ParentType", tt.methodName, tt.signature)
 			require.NoError(t, err)
 			ret := passthrough.NewPassThrough(m, "resilient", "r")
 			buf := &bytes.Buffer{}
