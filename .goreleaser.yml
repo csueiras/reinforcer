@@ -58,7 +58,7 @@ dockers:
 
 brews:
   - homepage: https://github.com/csueiras/reinforcer
-    description: "A codegen tool for easy adoption of resiliency patterns in Go"
+    description: "Codegen tool for easy adoption of resiliency patterns in Go"
     tap:
       owner: csueiras
       name: homebrew-reinforcer
