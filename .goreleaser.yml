@@ -60,9 +60,8 @@ brews:
   - homepage: https://github.com/csueiras/reinforcer
     description: "A codegen tool for easy adoption of resiliency patterns in Go"
     tap:
-      github:
-        owner: csueiras
-        name: homebrew-reinforcer
+      owner: csueiras
+      name: homebrew-reinforcer
     folder: Formula
     test: |
       system "#{bin}reinforcer --version"
