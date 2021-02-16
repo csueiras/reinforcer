@@ -5,7 +5,11 @@ before:
 
 builds:
   - binary: reinforcer
-    env: [CGO_ENABLED=0]
+    main: ./cmd/reinforcer/main.go
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - -s -w -X github.com/csueiras/reinforcer/cmd/reinforcer/cmd.Version={{.Version}}
     goos:
       - linux
       - windows
@@ -55,9 +59,10 @@ dockers:
 brews:
   - homepage: https://github.com/csueiras/reinforcer
     description: "A codegen tool for easy adoption of resiliency patterns in Go"
-    github:
-      owner: csueiras
-      name: homebrew-reinforcer
+    tap:
+      github:
+        owner: csueiras
+        name: homebrew-reinforcer
     folder: Formula
     test: |
       system "#{bin}reinforcer --version"
