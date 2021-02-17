@@ -1,4 +1,4 @@
-//go:generate reinforcer --name=Client --outputdir=./reinforced
+//go:generate reinforcer --debug --target=Client --target=SomeOtherClient --outputdir=./reinforced
 
 package client
 
@@ -12,6 +12,11 @@ import (
 type Client interface {
 	SayHello(ctx context.Context, name string) error
 	GenerateGreeting(ctx context.Context, name string) (string, error)
+}
+
+// SomeOtherClient is another example service interface that can be targeted
+type SomeOtherClient interface {
+	DoStuff() error
 }
 
 // FakeClient is a Client implementation that will randomly fail

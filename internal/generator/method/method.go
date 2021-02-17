@@ -35,7 +35,7 @@ func init() {
 	errType.Complete()
 	ErrType = types.NewNamed(types.NewTypeName(0, nil, "error", nil), errType, nil)
 
-	_, iface, err := loader.DefaultLoader().Load("context", "Context")
+	iface, err := loader.DefaultLoader().LoadOne("context", "Context")
 	if err != nil {
 		panic(err)
 	}
