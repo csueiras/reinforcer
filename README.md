@@ -35,6 +35,53 @@ brew tap csueiras/reinforcer && brew install reinforcer
 
 ## Usage
 
+### CLI
+
+Generate reinforced code for all exported interfaces:
+```
+reinforcer --src=./service.go --targetall --outputdir=./reinforced
+```
+
+Generate reinforced code using regex:
+```
+reinforcer --src=./service.go --target='.*Service' --outputdir=./reinforced
+```
+
+Generate reinforced code using an exact match:
+```
+reinforcer --src=./service.go --target=MyService --outputdir=./reinforced
+```
+
+For more options:
+```
+reinforcer --help
+```
+
+```
+Reinforcer is a CLI tool that generates code from interfaces that
+will automatically inject middleware. Middlewares provide resiliency constructs
+such as circuit breaker, retries, timeouts, etc.
+
+Usage:
+  reinforcer [flags]
+
+Flags:
+      --config string      config file (default is $HOME/.reinforcer.yaml)
+  -d, --debug              enables debug logs
+  -h, --help               help for reinforcer
+  -i, --ignorenoret        ignores methods that don't return anything (they won't be wrapped in the middleware). By default they'll be wrapped in a middleware and if the middleware emits an error the call will panic.
+  -p, --outpkg string      name of generated package (default "reinforced")
+  -o, --outputdir string   directory to write the generated code to (default "./reinforced")
+  -q, --silent             disables logging. Mutually exclusive with the debug flag.
+  -s, --src strings        source files to scan for the target interface. If unspecified the file pointed by the env variable GOFILE will be used.
+  -t, --target strings     name of target type or regex to match interface names with
+  -a, --targetall          codegen for all exported interfaces discovered. This option is mutually exclusive with the target option.
+  -v, --version            show reinforcer's version
+```
+
+### Using Reinforced Code
+
+
 1. Describe the target that you want to generate code for:
 
 ```
@@ -59,7 +106,7 @@ r := runner.NewFactory(
 
 ```
 errPredicate := func(method string, err error) bool {
-    if method == "DoOperation" && errors.Is(client.NotFound, err) {
+    if method == reinforced.ClientMethods.DoOperation && errors.Is(client.NotFound, err) {
         return false
     }
     return true
