@@ -106,7 +106,7 @@ r := runner.NewFactory(
 
 ```
 errPredicate := func(method string, err error) bool {
-    if method == "DoOperation" && errors.Is(client.NotFound, err) {
+    if method == reinforced.ClientMethods.DoOperation && errors.Is(client.NotFound, err) {
         return false
     }
     return true
