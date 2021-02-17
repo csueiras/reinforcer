@@ -10,3 +10,10 @@ var ClientMethods = struct {
 	GenerateGreeting: "GenerateGreeting",
 	SayHello:         "SayHello",
 }
+
+// SomeOtherClientMethods are the methods in SomeOtherClient
+var SomeOtherClientMethods = struct {
+	DoStuff string
+}{
+	DoStuff: "DoStuff",
+}

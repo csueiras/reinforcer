@@ -2,10 +2,14 @@ package loader
 
 import (
 	"fmt"
+	"github.com/rs/zerolog/log"
 	"go/types"
 	"golang.org/x/tools/go/packages"
+	"regexp"
 	"strings"
 )
+
+const regexChars = "\\.+*?()|[]{}^$"
 
 // LoadingError holds any errors that occurred while loading a package
 type LoadingError struct {
@@ -41,8 +45,48 @@ func NewLoader(pkgLoader func(cfg *packages.Config, patterns ...string) ([]*pack
 	}
 }
 
-// Load loads the package in path and extracts out the interface type by the name of targetTypeName
-func (l *Loader) Load(path, targetTypeName string) (*packages.Package, *types.Interface, error) {
+// LoadOne loads the given type
+func (l *Loader) LoadOne(path, name string) (*types.Interface, error) {
+	results, err := l.LoadMatched(path, []string{fmt.Sprintf(`\b%s\b`, name)})
+	if err != nil {
+		return nil, err
+	}
+	if len(results) > 1 {
+		// This should technically be impossible
+		return nil, fmt.Errorf("multiple interfaces with name %s found", name)
+	}
+	for _, typ := range results {
+		return typ, nil
+	}
+	return nil, fmt.Errorf("%s not found", name)
+}
+
+// LoadAll loads all types discovered in the path that are interface types
+func (l *Loader) LoadAll(path string) (map[string]*types.Interface, error) {
+	return l.LoadMatched(path, []string{".*"})
+}
+
+// LoadMatched loads types that match the given expressions, the expressions can be regex or strings to be exact-matched
+func (l *Loader) LoadMatched(path string, expressions []string) (map[string]*types.Interface, error) {
+	results := make(map[string]*types.Interface)
+
+	filter, err := exprToFilter(expressions)
+	if err != nil {
+		return nil, err
+	}
+
+	_, interfaces, err := l.loadExpr(path, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	for name, interfaceType := range interfaces {
+		results[name] = interfaceType
+	}
+	return results, nil
+}
+
+func (l *Loader) loadExpr(path string, expr *regexp.Regexp) (*packages.Package, map[string]*types.Interface, error) {
 	cfg := &packages.Config{Mode: packages.NeedTypes | packages.NeedImports}
 	pkgs, err := l.loaderFn(cfg, path)
 
@@ -55,20 +99,24 @@ func (l *Loader) Load(path, targetTypeName string) (*packages.Package, *types.In
 	}
 
 	pkg := pkgs[0]
-	obj := pkg.Types.Scope().Lookup(targetTypeName)
-	if obj == nil {
-		return nil, nil, fmt.Errorf("%s not found in declared types of %s", targetTypeName, pkg)
+	typesFound := pkg.Types.Scope().Names()
+	results := make(map[string]*types.Interface)
+	for _, typeFound := range typesFound {
+		if expr.MatchString(typeFound) {
+			obj := pkg.Types.Scope().Lookup(typeFound)
+			if obj == nil {
+				return nil, nil, fmt.Errorf("%s not found in declared types of %s", typeFound, pkg)
+			}
+			interfaceType, ok := obj.Type().Underlying().(*types.Interface)
+			if !ok {
+				log.Debug().Msgf("Ignoring matching type %s because it is not an interface type", typeFound)
+				continue
+			}
+			log.Info().Msgf("Discovered type %s", typeFound)
+			results[typeFound] = interfaceType
+		}
 	}
-
-	if _, ok := obj.(*types.TypeName); !ok {
-		return nil, nil, fmt.Errorf("%v is not a named type", obj)
-	}
-
-	interfaceType, ok := obj.Type().Underlying().(*types.Interface)
-	if !ok {
-		return nil, nil, fmt.Errorf("type %v is not an Interface", obj)
-	}
-	return pkg, interfaceType, nil
+	return pkg, results, nil
 }
 
 func extractPackageErrors(pkgs []*packages.Package) error {
@@ -84,4 +132,16 @@ func extractPackageErrors(pkgs []*packages.Package) error {
 		}
 	}
 	return nil
+}
+
+func exprToFilter(expressions []string) (*regexp.Regexp, error) {
+	expression := strings.Join(expressions, "|")
+	if strings.ContainsAny(expression, regexChars) {
+		filter, err := regexp.Compile(expression)
+		if err != nil {
+			return nil, fmt.Errorf("failed to compile expression %q; error=%w", expression, err)
+		}
+		return filter, nil
+	}
+	return regexp.MustCompile(fmt.Sprintf("\\b%s\\b", expression)), nil
 }
