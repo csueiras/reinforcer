@@ -22,7 +22,7 @@ type Service interface {
 }
 `,
 		}}})
-	t.Cleanup(exported.Cleanup)
+	defer exported.Cleanup()
 
 	l := loader.NewLoader(func(cfg *packages.Config, patterns ...string) ([]*packages.Package, error) {
 		exported.Config.Mode = cfg.Mode
@@ -60,7 +60,7 @@ type NotAnInterface struct {
 }
 `,
 		}}})
-	t.Cleanup(exported.Cleanup)
+	defer exported.Cleanup()
 
 	t.Run("RegEx", func(t *testing.T) {
 		l := loader.NewLoader(func(cfg *packages.Config, patterns ...string) ([]*packages.Package, error) {
