@@ -517,7 +517,7 @@ func loadInterface(t *testing.T, filesCode map[string]input) []*generator.FileCo
 		},
 	}
 	exported := packagestest.Export(t, packagestest.GOPATH, mods)
-	t.Cleanup(exported.Cleanup)
+	defer exported.Cleanup()
 
 	l := loader.NewLoader(func(cfg *packages.Config, patterns ...string) ([]*packages.Package, error) {
 		exported.Config.Mode = cfg.Mode
