@@ -9,6 +9,9 @@ import (
 	"go/types"
 )
 
+// ErrNoTargetableTypesFound indicates that no types that could be targeted for code generation were discovered
+var ErrNoTargetableTypesFound = fmt.Errorf("no targetable types were discovered")
+
 // Loader describes the loader component
 type Loader interface {
 	LoadAll(path string, mode loader.LoadMode) (map[string]*loader.Result, error)
@@ -69,6 +72,10 @@ func (e *Executor) Execute(settings *Parameters) (*generator.Generated, error) {
 				Package:       res.Package,
 			})
 		}
+	}
+
+	if len(cfg) == 0 {
+		return nil, ErrNoTargetableTypesFound
 	}
 
 	code, err := generator.Generate(generator.Config{
