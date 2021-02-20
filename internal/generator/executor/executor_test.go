@@ -15,10 +15,9 @@ func TestExecutor_Execute(t *testing.T) {
 		l := &mocks.Loader{}
 		l.On("LoadMatched", "./testpkg.go", []string{"MyService"}, loader.FileLoadMode).Return(
 			map[string]*loader.Result{
-				"LockService": &loader.Result{
+				"LockService": {
 					Name:          "LockService",
 					InterfaceType: createTestInterfaceType(),
-					Package:       types.NewPackage("github.com/csueiras/testpkg", "testpkg"),
 				},
 			}, nil,
 		)

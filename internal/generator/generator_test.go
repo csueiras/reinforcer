@@ -790,12 +790,6 @@ func loadInterface(t *testing.T, filesCode map[string]input) []*generator.FileCo
 			Name:  pkg,
 			Files: m,
 		},
-		//{
-		//	Name: "github.com/other/fake/unresilient",
-		//	Files: map[string]interface{}{
-		//		"unresilient.go": `package unresilient`
-		//	},
-		//},
 	}
 	exported := packagestest.Export(t, packagestest.GOPATH, mods)
 	defer exported.Cleanup()
@@ -813,7 +807,6 @@ func loadInterface(t *testing.T, filesCode map[string]input) []*generator.FileCo
 			SrcTypeName:   in.interfaceName,
 			OutTypeName:   fmt.Sprintf("Generated%s", in.interfaceName),
 			InterfaceType: svc.InterfaceType,
-			Package:       svc.Package,
 		})
 	}
 	return loadedTypes

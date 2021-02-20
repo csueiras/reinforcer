@@ -23,8 +23,6 @@ type FileConfig struct {
 	OutTypeName string
 	// InterfaceType holds the type information for SrcTypeName
 	InterfaceType *types.Interface
-	// Package holds a reference to the package the interface was found in
-	Package *types.Package
 }
 
 func (f *FileConfig) targetName() string {
@@ -90,7 +88,7 @@ func Generate(cfg Config) (*Generated, error) {
 	var fileMethods []*fileMeta
 
 	for _, fileConfig := range cfg.Files {
-		methods, err := parseMethods(fileConfig.Package, fileConfig.OutTypeName, fileConfig.InterfaceType)
+		methods, err := parseMethods(fileConfig.OutTypeName, fileConfig.InterfaceType)
 		if err != nil {
 			return nil, err
 		}
@@ -261,11 +259,11 @@ func generateConstants(outPkg string, meta []*fileMeta) (string, error) {
 	return renderToString(f)
 }
 
-func parseMethods(basePackage *types.Package, typeName string, interfaceType *types.Interface) ([]*method.Method, error) {
+func parseMethods(typeName string, interfaceType *types.Interface) ([]*method.Method, error) {
 	var methods []*method.Method
 	for m := 0; m < interfaceType.NumMethods(); m++ {
 		meth := interfaceType.Method(m)
-		mm, err := method.ParseMethod(basePackage, typeName, meth.Name(), meth.Type().(*types.Signature))
+		mm, err := method.ParseMethod(typeName, meth.Name(), meth.Type().(*types.Signature))
 		if err != nil {
 			return nil, err
 		}
