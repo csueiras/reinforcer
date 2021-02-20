@@ -96,7 +96,7 @@ func TestRetryable_Statement(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m, err := method.ParseMethod(nil, "Parent", tt.methodName, tt.signature)
+			m, err := method.ParseMethod("Parent", tt.methodName, tt.signature)
 			require.NoError(t, err)
 			ret := retryable.NewRetryable(m, "resilient", "r")
 			buf := &bytes.Buffer{}
@@ -117,7 +117,7 @@ func TestRetryable_Statement(t *testing.T) {
 
 	t.Run("Function does not return error", func(t *testing.T) {
 		require.Panics(t, func() {
-			m, err := method.ParseMethod(nil, "Parent", "Fn", types.NewSignature(nil, types.NewTuple(), types.NewTuple(), false))
+			m, err := method.ParseMethod("Parent", "Fn", types.NewSignature(nil, types.NewTuple(), types.NewTuple(), false))
 			require.NoError(t, err)
 			retryable.NewRetryable(m, "resilient", "r")
 		})

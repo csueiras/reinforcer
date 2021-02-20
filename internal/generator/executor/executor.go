@@ -69,7 +69,6 @@ func (e *Executor) Execute(settings *Parameters) (*generator.Generated, error) {
 				SrcTypeName:   typName,
 				OutTypeName:   typName,
 				InterfaceType: res.InterfaceType,
-				Package:       res.Package,
 			})
 		}
 	}

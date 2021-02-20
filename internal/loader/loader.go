@@ -40,7 +40,6 @@ func (l *LoadingError) Error() string {
 type Result struct {
 	Name          string
 	InterfaceType *types.Interface
-	Package       *types.Package
 }
 
 // Loader is a utility service for extracting type information from a go package
@@ -130,7 +129,6 @@ func (l *Loader) loadExpr(path string, expr *regexp.Regexp, mode LoadMode) (*pac
 			results[typeFound] = &Result{
 				Name:          typeFound,
 				InterfaceType: interfaceType,
-				Package:       pkg.Types,
 			}
 		}
 	}

@@ -33,8 +33,6 @@ type Service interface {
 	require.NoError(t, err)
 	require.NotNil(t, svc)
 	require.Equal(t, "interface{GetUserID(ctx context.Context, userID string) (string, error)}", svc.InterfaceType.String())
-	require.NotNil(t, svc.Package)
-	require.Equal(t, "github.com/csueiras/fake", svc.Package.Path())
 }
 
 func TestLoadMatched(t *testing.T) {

@@ -90,7 +90,7 @@ func (m *Method) Parameters() []jen.Code {
 }
 
 // ParseMethod parses the given types.Signature and generates a Method
-func ParseMethod(basePkg *types.Package, parentTypeName, name string, signature *types.Signature) (*Method, error) {
+func ParseMethod(parentTypeName, name string, signature *types.Signature) (*Method, error) {
 	m := &Method{
 		ParentTypeName:   parentTypeName,
 		Name:             name,
@@ -112,7 +112,7 @@ func ParseMethod(basePkg *types.Package, parentTypeName, name string, signature 
 		} else {
 			paramName := fmt.Sprintf("arg%d", i)
 
-			paramType, err := toType(basePkg, param.Type(), isVariadic && i == lastIndex)
+			paramType, err := toType(param.Type(), isVariadic && i == lastIndex)
 			if err != nil {
 				return nil, fmt.Errorf("failed to convert type=%v; error=%w", param.Type(), err)
 			}
@@ -122,7 +122,7 @@ func ParseMethod(basePkg *types.Package, parentTypeName, name string, signature 
 	}
 	for i := 0; i < signature.Results().Len(); i++ {
 		res := signature.Results().At(i)
-		resType, err := toType(basePkg, res.Type(), false)
+		resType, err := toType(res.Type(), false)
 		if err != nil {
 			panic(err)
 		}
@@ -159,12 +159,12 @@ func isContextType(t types.Type) bool {
 }
 
 // variadicToType generates the representation for a variadic type "...MyType"
-func variadicToType(basePkg *types.Package, t types.Type) (jen.Code, error) {
+func variadicToType(t types.Type) (jen.Code, error) {
 	sliceType, ok := t.(*types.Slice)
 	if !ok {
 		return nil, fmt.Errorf("expected type to be *types.Slice, got=%T", t)
 	}
-	sliceElemType, err := toType(basePkg, sliceType.Elem(), false)
+	sliceElemType, err := toType(sliceType.Elem(), false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert slice's type; error=%w", err)
 	}
@@ -172,16 +172,16 @@ func variadicToType(basePkg *types.Package, t types.Type) (jen.Code, error) {
 }
 
 // toType generates the representation for the given type
-func toType(basePkg *types.Package, t types.Type, variadic bool) (jen.Code, error) {
+func toType(t types.Type, variadic bool) (jen.Code, error) {
 	if variadic {
-		return variadicToType(basePkg, t)
+		return variadicToType(t)
 	}
 
 	switch v := t.(type) {
 	case *types.Basic:
 		return jen.Id(v.Name()), nil
 	case *types.Chan:
-		rt, err := toType(basePkg, v.Elem(), false)
+		rt, err := toType(v.Elem(), false)
 		if err != nil {
 			return nil, err
 		}
@@ -198,9 +198,6 @@ func toType(basePkg *types.Package, t types.Type, variadic bool) (jen.Code, erro
 		if _, ok := v.Underlying().(*types.Interface); ok {
 			if typeName.Pkg() != nil {
 				pkgPath := typeName.Pkg().Path()
-				if pkgPath == "command-line-arguments" {
-					pkgPath = basePkg.Path()
-				}
 				return jen.Qual(
 					pkgPath,
 					typeName.Name(),
@@ -209,15 +206,12 @@ func toType(basePkg *types.Package, t types.Type, variadic bool) (jen.Code, erro
 			return jen.Id(typeName.Name()), nil
 		}
 		pkgPath := typeName.Pkg().Path()
-		if pkgPath == "command-line-arguments" {
-			pkgPath = basePkg.Path()
-		}
 		return jen.Qual(
 			pkgPath,
 			typeName.Name(),
 		), nil
 	case *types.Pointer:
-		rt, err := toType(basePkg, v.Elem(), false)
+		rt, err := toType(v.Elem(), false)
 		if err != nil {
 			return nil, err
 		}
@@ -225,7 +219,7 @@ func toType(basePkg *types.Package, t types.Type, variadic bool) (jen.Code, erro
 	case *types.Interface:
 		return jen.Id("interface{}"), nil
 	case *types.Slice:
-		elemType, err := toType(basePkg, v.Elem(), false)
+		elemType, err := toType(v.Elem(), false)
 		if err != nil {
 			return nil, err
 		}
