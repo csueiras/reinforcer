@@ -158,7 +158,7 @@ func TestNewMethod(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := method.ParseMethod("ParentType", tt.args.name, tt.args.signature)
+			got, err := method.ParseMethod(nil,"ParentType", tt.args.name, tt.args.signature)
 			require.NoError(t, err)
 			require.Equal(t, tt.want.Name, got.Name)
 			require.Equal(t, tt.want.HasContext, got.HasContext)

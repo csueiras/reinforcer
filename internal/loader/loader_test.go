@@ -29,10 +29,12 @@ type Service interface {
 		return packages.Load(exported.Config, patterns...)
 	})
 
-	svc, err := l.LoadOne("github.com/csueiras/fake", "Service")
+	svc, err := l.LoadOne("github.com/csueiras/fake", "Service", loader.PackageLoadMode)
 	require.NoError(t, err)
 	require.NotNil(t, svc)
-	require.Equal(t, "interface{GetUserID(ctx context.Context, userID string) (string, error)}", svc.String())
+	require.Equal(t, "interface{GetUserID(ctx context.Context, userID string) (string, error)}", svc.InterfaceType.String())
+	require.NotNil(t, svc.Package)
+	require.Equal(t, "github.com/csueiras/fake", svc.Package.Path())
 }
 
 func TestLoadMatched(t *testing.T) {
@@ -68,14 +70,14 @@ type NotAnInterface struct {
 			return packages.Load(exported.Config, patterns...)
 		})
 
-		results, err := l.LoadMatched("github.com/csueiras/fake", []string{".*Service"})
+		results, err := l.LoadMatched("github.com/csueiras/fake", []string{".*Service"}, loader.PackageLoadMode)
 		require.NoError(t, err)
 		require.NotNil(t, results)
 		require.Equal(t, 2, len(results))
 		require.NotNil(t, results["UserService"])
-		require.Equal(t, "interface{GetUserID(ctx context.Context, userID string) (string, error)}", results["UserService"].String())
+		require.Equal(t, "interface{GetUserID(ctx context.Context, userID string) (string, error)}", results["UserService"].InterfaceType.String())
 		require.NotNil(t, results["HelloWorldService"])
-		require.Equal(t, "interface{Hello(ctx context.Context, name string) error}", results["HelloWorldService"].String())
+		require.Equal(t, "interface{Hello(ctx context.Context, name string) error}", results["HelloWorldService"].InterfaceType.String())
 	})
 
 	t.Run("Multiple RegEx Expressions", func(t *testing.T) {
@@ -84,14 +86,14 @@ type NotAnInterface struct {
 			return packages.Load(exported.Config, patterns...)
 		})
 
-		results, err := l.LoadMatched("github.com/csueiras/fake", []string{"User.*", "Hello.*Service"})
+		results, err := l.LoadMatched("github.com/csueiras/fake", []string{"User.*", "Hello.*Service"}, loader.PackageLoadMode)
 		require.NoError(t, err)
 		require.NotNil(t, results)
 		require.Equal(t, 2, len(results))
 		require.NotNil(t, results["UserService"])
-		require.Equal(t, "interface{GetUserID(ctx context.Context, userID string) (string, error)}", results["UserService"].String())
+		require.Equal(t, "interface{GetUserID(ctx context.Context, userID string) (string, error)}", results["UserService"].InterfaceType.String())
 		require.NotNil(t, results["HelloWorldService"])
-		require.Equal(t, "interface{Hello(ctx context.Context, name string) error}", results["HelloWorldService"].String())
+		require.Equal(t, "interface{Hello(ctx context.Context, name string) error}", results["HelloWorldService"].InterfaceType.String())
 	})
 
 	t.Run("Exact Match", func(t *testing.T) {
@@ -100,12 +102,12 @@ type NotAnInterface struct {
 			return packages.Load(exported.Config, patterns...)
 		})
 
-		results, err := l.LoadMatched("github.com/csueiras/fake", []string{"HelloWorldService"})
+		results, err := l.LoadMatched("github.com/csueiras/fake", []string{"HelloWorldService"}, loader.PackageLoadMode)
 		require.NoError(t, err)
 		require.NotNil(t, results)
 		require.Equal(t, 1, len(results))
 		require.NotNil(t, results["HelloWorldService"])
-		require.Equal(t, "interface{Hello(ctx context.Context, name string) error}", results["HelloWorldService"].String())
+		require.Equal(t, "interface{Hello(ctx context.Context, name string) error}", results["HelloWorldService"].InterfaceType.String())
 	})
 
 	t.Run("Exact Match: No Match", func(t *testing.T) {
@@ -114,7 +116,7 @@ type NotAnInterface struct {
 			return packages.Load(exported.Config, patterns...)
 		})
 
-		results, err := l.LoadMatched("github.com/csueiras/fake", []string{"Hello"})
+		results, err := l.LoadMatched("github.com/csueiras/fake", []string{"Hello"}, loader.PackageLoadMode)
 		require.NoError(t, err)
 		require.NotNil(t, results)
 		require.Equal(t, 0, len(results))
@@ -126,13 +128,13 @@ type NotAnInterface struct {
 			return packages.Load(exported.Config, patterns...)
 		})
 
-		results, err := l.LoadMatched("github.com/csueiras/fake", []string{"UserService", "HelloWorldService", "NotAnInterface"})
+		results, err := l.LoadMatched("github.com/csueiras/fake", []string{"UserService", "HelloWorldService", "NotAnInterface"}, loader.PackageLoadMode)
 		require.NoError(t, err)
 		require.NotNil(t, results)
 		require.Equal(t, 2, len(results))
 		require.NotNil(t, results["UserService"])
-		require.Equal(t, "interface{GetUserID(ctx context.Context, userID string) (string, error)}", results["UserService"].String())
+		require.Equal(t, "interface{GetUserID(ctx context.Context, userID string) (string, error)}", results["UserService"].InterfaceType.String())
 		require.NotNil(t, results["HelloWorldService"])
-		require.Equal(t, "interface{Hello(ctx context.Context, name string) error}", results["HelloWorldService"].String())
+		require.Equal(t, "interface{Hello(ctx context.Context, name string) error}", results["HelloWorldService"].InterfaceType.String())
 	})
 }

@@ -5,13 +5,14 @@ package executor
 import (
 	"fmt"
 	"github.com/csueiras/reinforcer/internal/generator"
+	"github.com/csueiras/reinforcer/internal/loader"
 	"go/types"
 )
 
 // Loader describes the loader component
 type Loader interface {
-	LoadAll(path string) (map[string]*types.Interface, error)
-	LoadMatched(path string, expressions []string) (map[string]*types.Interface, error)
+	LoadAll(path string, mode loader.LoadMode) (map[string]*loader.Result, error)
+	LoadMatched(path string, expressions []string, mode loader.LoadMode) (map[string]*loader.Result, error)
 }
 
 // Parameters are the input parameters for the executor
@@ -44,27 +45,28 @@ func (e *Executor) Execute(settings *Parameters) (*generator.Generated, error) {
 	var cfg []*generator.FileConfig
 	var err error
 	for _, source := range settings.Sources {
-		var match map[string]*types.Interface
+		var match map[string]*loader.Result
 		if settings.TargetsAll {
-			match, err = e.loader.LoadAll(source)
+			match, err = e.loader.LoadAll(source, loader.FileLoadMode)
 		} else {
-			match, err = e.loader.LoadMatched(source, settings.Targets)
+			match, err = e.loader.LoadMatched(source, settings.Targets, loader.FileLoadMode)
 		}
 		if err != nil {
 			return nil, err
 		}
 
 		// Check types aren't repeated before adding them to the generator's config
-		for typName, typ := range match {
+		for typName, res := range match {
 			if _, ok := results[typName]; ok {
 				return nil, fmt.Errorf("multiple types with same name discovered with name %s", typName)
 			}
-			results[typName] = typ
+			results[typName] = res.InterfaceType
 
 			cfg = append(cfg, &generator.FileConfig{
 				SrcTypeName:   typName,
 				OutTypeName:   typName,
-				InterfaceType: typ,
+				InterfaceType: res.InterfaceType,
+				Package:       res.Package,
 			})
 		}
 	}
