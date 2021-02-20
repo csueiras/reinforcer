@@ -5,8 +5,15 @@ package client
 import (
 	"context"
 	"fmt"
+	"github.com/csueiras/reinforcer/example/client/sub"
 	"math/rand"
+	"os"
 )
+
+// File is a type defined in the same package that we are using for targetting
+type File struct {
+	Name string
+}
 
 // Client is an example service interface that we will generate code for
 type Client interface {
@@ -17,6 +24,9 @@ type Client interface {
 // SomeOtherClient is another example service interface that can be targeted
 type SomeOtherClient interface {
 	DoStuff() error
+	SaveFile(myFile *File, osFile *os.File) error
+	GetUser(ctx context.Context) (*sub.User, error)
+	MethodWithChannel(myChan <- chan bool) error
 }
 
 // FakeClient is a Client implementation that will randomly fail

@@ -35,11 +35,11 @@ func init() {
 	errType.Complete()
 	ErrType = types.NewNamed(types.NewTypeName(0, nil, "error", nil), errType, nil)
 
-	iface, err := loader.DefaultLoader().LoadOne("context", "Context")
+	iface, err := loader.DefaultLoader().LoadOne("context", "Context", loader.PackageLoadMode)
 	if err != nil {
 		panic(err)
 	}
-	ContextType = iface
+	ContextType = iface.InterfaceType
 }
 
 // Method holds all of the data for code generation on a specific method signature
@@ -90,7 +90,7 @@ func (m *Method) Parameters() []jen.Code {
 }
 
 // ParseMethod parses the given types.Signature and generates a Method
-func ParseMethod(parentTypeName, name string, signature *types.Signature) (*Method, error) {
+func ParseMethod(basePkg *types.Package, parentTypeName, name string, signature *types.Signature) (*Method, error) {
 	m := &Method{
 		ParentTypeName:   parentTypeName,
 		Name:             name,
@@ -111,7 +111,8 @@ func ParseMethod(parentTypeName, name string, signature *types.Signature) (*Meth
 			m.ParameterNames = append(m.ParameterNames, ctxVarName)
 		} else {
 			paramName := fmt.Sprintf("arg%d", i)
-			paramType, err := toType(param.Type(), isVariadic && i == lastIndex)
+
+			paramType, err := toType(basePkg, param.Type(), isVariadic && i == lastIndex)
 			if err != nil {
 				return nil, fmt.Errorf("failed to convert type=%v; error=%w", param.Type(), err)
 			}
@@ -121,7 +122,7 @@ func ParseMethod(parentTypeName, name string, signature *types.Signature) (*Meth
 	}
 	for i := 0; i < signature.Results().Len(); i++ {
 		res := signature.Results().At(i)
-		resType, err := toType(res.Type(), false)
+		resType, err := toType(basePkg, res.Type(), false)
 		if err != nil {
 			panic(err)
 		}
@@ -158,12 +159,12 @@ func isContextType(t types.Type) bool {
 }
 
 // variadicToType generates the representation for a variadic type "...MyType"
-func variadicToType(t types.Type) (jen.Code, error) {
+func variadicToType(basePkg *types.Package, t types.Type) (jen.Code, error) {
 	sliceType, ok := t.(*types.Slice)
 	if !ok {
 		return nil, fmt.Errorf("expected type to be *types.Slice, got=%T", t)
 	}
-	sliceElemType, err := toType(sliceType.Elem(), false)
+	sliceElemType, err := toType(basePkg, sliceType.Elem(), false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert slice's type; error=%w", err)
 	}
@@ -171,42 +172,63 @@ func variadicToType(t types.Type) (jen.Code, error) {
 }
 
 // toType generates the representation for the given type
-func toType(t types.Type, variadic bool) (jen.Code, error) {
+func toType(basePkg *types.Package, t types.Type, variadic bool) (jen.Code, error) {
 	if variadic {
-		return variadicToType(t)
+		return variadicToType(basePkg, t)
 	}
 
 	switch v := t.(type) {
 	case *types.Basic:
 		return jen.Id(v.Name()), nil
+	case *types.Chan:
+		rt, err := toType(basePkg, v.Elem(), false)
+		if err != nil {
+			return nil, err
+		}
+		switch v.Dir() {
+		case types.SendRecv:
+			return jen.Chan().Add(rt), nil
+		case types.RecvOnly:
+			return jen.Op("<-").Chan().Add(rt), nil
+		default:
+			return jen.Chan().Op("<-").Add(rt), nil
+		}
 	case *types.Named:
 		typeName := v.Obj()
 		if _, ok := v.Underlying().(*types.Interface); ok {
 			if typeName.Pkg() != nil {
+				pkgPath := typeName.Pkg().Path()
+				if pkgPath == "command-line-arguments" {
+					pkgPath = basePkg.Path()
+				}
 				return jen.Qual(
-					typeName.Pkg().Path(),
+					pkgPath,
 					typeName.Name(),
 				), nil
 			}
 			return jen.Id(typeName.Name()), nil
 		}
+		pkgPath := typeName.Pkg().Path()
+		if pkgPath == "command-line-arguments" {
+			pkgPath = basePkg.Path()
+		}
 		return jen.Qual(
-			typeName.Pkg().Path(),
+			pkgPath,
 			typeName.Name(),
 		), nil
 	case *types.Pointer:
-		rt, err := toType(v.Elem(), false)
+		rt, err := toType(basePkg, v.Elem(), false)
 		if err != nil {
 			return nil, err
 		}
 		return jen.Op("*").Add(rt), nil
 	case *types.Interface:
-		if v.NumMethods() != 0 {
-			panic("Unable to mock inline interfaces with methods")
-		}
+		//if v.NumMethods() != 0 {
+		//	panic("Unable to mock inline interfaces with methods")
+		//}
 		return jen.Id("interface{}"), nil
 	case *types.Slice:
-		elemType, err := toType(v.Elem(), false)
+		elemType, err := toType(basePkg, v.Elem(), false)
 		if err != nil {
 			return nil, err
 		}

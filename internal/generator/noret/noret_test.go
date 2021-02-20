@@ -57,7 +57,7 @@ func TestNoReturn_Statement(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m, err := method.ParseMethod("Parent", tt.methodName, tt.signature)
+			m, err := method.ParseMethod(nil, "Parent", tt.methodName, tt.signature)
 			require.NoError(t, err)
 			ret := noret.NewNoReturn(m, "resilient", "r")
 			buf := &bytes.Buffer{}

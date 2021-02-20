@@ -5,8 +5,19 @@ import (
 	"github.com/rs/zerolog/log"
 	"go/types"
 	"golang.org/x/tools/go/packages"
+	"path/filepath"
 	"regexp"
 	"strings"
+)
+
+// LoadMode determines how a path should be loaded
+type LoadMode int
+
+const (
+	// PackageLoadMode indicates that the path is an import path and should be loaded with that context
+	PackageLoadMode LoadMode = iota
+	// FileLoadMode indicates that the path points to a file (relative or absolute)
+	FileLoadMode
 )
 
 const regexChars = "\\.+*?()|[]{}^$"
@@ -23,6 +34,13 @@ func (l *LoadingError) Error() string {
 		s.WriteString(fmt.Sprintf("\t%d: %s\n", i, err.Error()))
 	}
 	return s.String()
+}
+
+// Result holds the results of loading a particular type
+type Result struct {
+	Name          string
+	InterfaceType *types.Interface
+	Package       *types.Package
 }
 
 // Loader is a utility service for extracting type information from a go package
@@ -46,8 +64,8 @@ func NewLoader(pkgLoader func(cfg *packages.Config, patterns ...string) ([]*pack
 }
 
 // LoadOne loads the given type
-func (l *Loader) LoadOne(path, name string) (*types.Interface, error) {
-	results, err := l.LoadMatched(path, []string{fmt.Sprintf(`\b%s\b`, name)})
+func (l *Loader) LoadOne(path, name string, mode LoadMode) (*Result, error) {
+	results, err := l.LoadMatched(path, []string{fmt.Sprintf(`\b%s\b`, name)}, mode)
 	if err != nil {
 		return nil, err
 	}
@@ -62,45 +80,41 @@ func (l *Loader) LoadOne(path, name string) (*types.Interface, error) {
 }
 
 // LoadAll loads all types discovered in the path that are interface types
-func (l *Loader) LoadAll(path string) (map[string]*types.Interface, error) {
-	return l.LoadMatched(path, []string{".*"})
+func (l *Loader) LoadAll(path string, mode LoadMode) (map[string]*Result, error) {
+	return l.LoadMatched(path, []string{".*"}, mode)
 }
 
 // LoadMatched loads types that match the given expressions, the expressions can be regex or strings to be exact-matched
-func (l *Loader) LoadMatched(path string, expressions []string) (map[string]*types.Interface, error) {
-	results := make(map[string]*types.Interface)
-
+func (l *Loader) LoadMatched(path string, expressions []string, mode LoadMode) (map[string]*Result, error) {
 	filter, err := exprToFilter(expressions)
 	if err != nil {
 		return nil, err
 	}
 
-	_, interfaces, err := l.loadExpr(path, filter)
+	_, results, err := l.loadExpr(path, filter, mode)
 	if err != nil {
 		return nil, err
 	}
 
-	for name, interfaceType := range interfaces {
-		results[name] = interfaceType
-	}
 	return results, nil
 }
 
-func (l *Loader) loadExpr(path string, expr *regexp.Regexp) (*packages.Package, map[string]*types.Interface, error) {
-	cfg := &packages.Config{Mode: packages.NeedTypes | packages.NeedImports}
-	pkgs, err := l.loaderFn(cfg, path)
-
+func (l *Loader) loadExpr(path string, expr *regexp.Regexp, mode LoadMode) (*packages.Package, map[string]*Result, error) {
+	pkgs, err := l.load(path, mode)
 	if err != nil {
-		return nil, nil, fmt.Errorf("loading packages for inspection: %v", err)
+		return nil, nil, err
 	}
 
 	if err = extractPackageErrors(pkgs); err != nil {
 		return nil, nil, err
 	}
+	if len(pkgs) == 0 {
+		return nil, nil, fmt.Errorf("package not found in %v", path)
+	}
 
 	pkg := pkgs[0]
 	typesFound := pkg.Types.Scope().Names()
-	results := make(map[string]*types.Interface)
+	results := make(map[string]*Result)
 	for _, typeFound := range typesFound {
 		if expr.MatchString(typeFound) {
 			obj := pkg.Types.Scope().Lookup(typeFound)
@@ -113,10 +127,41 @@ func (l *Loader) loadExpr(path string, expr *regexp.Regexp) (*packages.Package, 
 				continue
 			}
 			log.Info().Msgf("Discovered type %s", typeFound)
-			results[typeFound] = interfaceType
+			results[typeFound] = &Result{
+				Name:          typeFound,
+				InterfaceType: interfaceType,
+				Package:       pkg.Types,
+			}
 		}
 	}
 	return pkg, results, nil
+}
+
+func (l *Loader) load(path string, mode LoadMode) ([]*packages.Package, error) {
+	cfg := &packages.Config{
+		Mode: packages.NeedTypes | packages.NeedImports,
+	}
+
+	var pkgs []*packages.Package
+	var err error
+	if mode == PackageLoadMode {
+		pkgs, err = l.loaderFn(cfg, path)
+		if err != nil {
+			return nil, fmt.Errorf("loading packages for inspection: %v", err)
+		}
+	} else if mode == FileLoadMode {
+		absolutePath, err := filepath.Abs(path)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create absolute path from=%s; error=%w", path, err)
+		}
+		pkgs, err = l.loaderFn(cfg, "file="+absolutePath)
+		if err != nil {
+			return nil, fmt.Errorf("loading packages for inspection: %v", err)
+		}
+	} else {
+		return nil, fmt.Errorf("unsupported load mode=%v", mode)
+	}
+	return pkgs, nil
 }
 
 func extractPackageErrors(pkgs []*packages.Package) error {

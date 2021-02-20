@@ -2,10 +2,18 @@
 
 package reinforced
 
-import "context"
+import (
+	"context"
+	client "github.com/csueiras/reinforcer/example/client"
+	sub "github.com/csueiras/reinforcer/example/client/sub"
+	"os"
+)
 
 type targetSomeOtherClient interface {
 	DoStuff() error
+	GetUser(ctx context.Context) (*sub.User, error)
+	MethodWithChannel(arg0 <-chan bool) error
+	SaveFile(arg0 *client.File, arg1 *os.File) error
 }
 type SomeOtherClient struct {
 	*base
@@ -37,6 +45,55 @@ func (s *SomeOtherClient) DoStuff() error {
 		var err error
 		err = s.delegate.DoStuff()
 		if s.errorPredicate(SomeOtherClientMethods.DoStuff, err) {
+			return err
+		}
+		nonRetryableErr = err
+		return nil
+	})
+	if nonRetryableErr != nil {
+		return nonRetryableErr
+	}
+	return err
+}
+func (s *SomeOtherClient) GetUser(ctx context.Context) (*sub.User, error) {
+	var nonRetryableErr error
+	var r0 *sub.User
+	err := s.run(ctx, SomeOtherClientMethods.GetUser, func(ctx context.Context) error {
+		var err error
+		r0, err = s.delegate.GetUser(ctx)
+		if s.errorPredicate(SomeOtherClientMethods.GetUser, err) {
+			return err
+		}
+		nonRetryableErr = err
+		return nil
+	})
+	if nonRetryableErr != nil {
+		return r0, nonRetryableErr
+	}
+	return r0, err
+}
+func (s *SomeOtherClient) MethodWithChannel(arg0 <-chan bool) error {
+	var nonRetryableErr error
+	err := s.run(context.Background(), SomeOtherClientMethods.MethodWithChannel, func(_ context.Context) error {
+		var err error
+		err = s.delegate.MethodWithChannel(arg0)
+		if s.errorPredicate(SomeOtherClientMethods.MethodWithChannel, err) {
+			return err
+		}
+		nonRetryableErr = err
+		return nil
+	})
+	if nonRetryableErr != nil {
+		return nonRetryableErr
+	}
+	return err
+}
+func (s *SomeOtherClient) SaveFile(arg0 *client.File, arg1 *os.File) error {
+	var nonRetryableErr error
+	err := s.run(context.Background(), SomeOtherClientMethods.SaveFile, func(_ context.Context) error {
+		var err error
+		err = s.delegate.SaveFile(arg0, arg1)
+		if s.errorPredicate(SomeOtherClientMethods.SaveFile, err) {
 			return err
 		}
 		nonRetryableErr = err

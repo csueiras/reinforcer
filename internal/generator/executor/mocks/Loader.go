@@ -3,8 +3,7 @@
 package mocks
 
 import (
-	types "go/types"
-
+	loader "github.com/csueiras/reinforcer/internal/loader"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -13,22 +12,22 @@ type Loader struct {
 	mock.Mock
 }
 
-// LoadAll provides a mock function with given fields: path
-func (_m *Loader) LoadAll(path string) (map[string]*types.Interface, error) {
-	ret := _m.Called(path)
+// LoadAll provides a mock function with given fields: path, mode
+func (_m *Loader) LoadAll(path string, mode loader.LoadMode) (map[string]*loader.Result, error) {
+	ret := _m.Called(path, mode)
 
-	var r0 map[string]*types.Interface
-	if rf, ok := ret.Get(0).(func(string) map[string]*types.Interface); ok {
-		r0 = rf(path)
+	var r0 map[string]*loader.Result
+	if rf, ok := ret.Get(0).(func(string, loader.LoadMode) map[string]*loader.Result); ok {
+		r0 = rf(path, mode)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(map[string]*types.Interface)
+			r0 = ret.Get(0).(map[string]*loader.Result)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(string) error); ok {
-		r1 = rf(path)
+	if rf, ok := ret.Get(1).(func(string, loader.LoadMode) error); ok {
+		r1 = rf(path, mode)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -36,22 +35,22 @@ func (_m *Loader) LoadAll(path string) (map[string]*types.Interface, error) {
 	return r0, r1
 }
 
-// LoadMatched provides a mock function with given fields: path, expressions
-func (_m *Loader) LoadMatched(path string, expressions []string) (map[string]*types.Interface, error) {
-	ret := _m.Called(path, expressions)
+// LoadMatched provides a mock function with given fields: path, expressions, mode
+func (_m *Loader) LoadMatched(path string, expressions []string, mode loader.LoadMode) (map[string]*loader.Result, error) {
+	ret := _m.Called(path, expressions, mode)
 
-	var r0 map[string]*types.Interface
-	if rf, ok := ret.Get(0).(func(string, []string) map[string]*types.Interface); ok {
-		r0 = rf(path, expressions)
+	var r0 map[string]*loader.Result
+	if rf, ok := ret.Get(0).(func(string, []string, loader.LoadMode) map[string]*loader.Result); ok {
+		r0 = rf(path, expressions, mode)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(map[string]*types.Interface)
+			r0 = ret.Get(0).(map[string]*loader.Result)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(string, []string) error); ok {
-		r1 = rf(path, expressions)
+	if rf, ok := ret.Get(1).(func(string, []string, loader.LoadMode) error); ok {
+		r1 = rf(path, expressions, mode)
 	} else {
 		r1 = ret.Error(1)
 	}
