@@ -11,28 +11,46 @@ import (
 )
 
 func TestExecutor_Execute(t *testing.T) {
-	l := &mocks.Loader{}
-	l.On("LoadMatched", "./testpkg.go", []string{"MyService"}, loader.FileLoadMode).Return(
-		map[string]*loader.Result{
-			"LockService": &loader.Result{
-				Name:          "LockService",
-				InterfaceType: createTestInterfaceType(),
-				Package:       types.NewPackage("github.com/csueiras/testpkg", "testpkg"),
-			},
-		}, nil,
-	)
+	t.Run("Loads types", func(t *testing.T) {
+		l := &mocks.Loader{}
+		l.On("LoadMatched", "./testpkg.go", []string{"MyService"}, loader.FileLoadMode).Return(
+			map[string]*loader.Result{
+				"LockService": &loader.Result{
+					Name:          "LockService",
+					InterfaceType: createTestInterfaceType(),
+					Package:       types.NewPackage("github.com/csueiras/testpkg", "testpkg"),
+				},
+			}, nil,
+		)
 
-	exec := executor.New(l)
-	got, err := exec.Execute(&executor.Parameters{
-		Sources:               []string{"./testpkg.go"},
-		Targets:               []string{"MyService"},
-		OutPkg:                "testpkg",
-		IgnoreNoReturnMethods: false,
+		exec := executor.New(l)
+		got, err := exec.Execute(&executor.Parameters{
+			Sources:               []string{"./testpkg.go"},
+			Targets:               []string{"MyService"},
+			OutPkg:                "testpkg",
+			IgnoreNoReturnMethods: false,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, got)
+		require.Equal(t, 1, len(got.Files))
+		require.Equal(t, "LockService", got.Files[0].TypeName)
 	})
-	require.NoError(t, err)
-	require.NotNil(t, got)
-	require.Equal(t, 1, len(got.Files))
-	require.Equal(t, "LockService", got.Files[0].TypeName)
+
+	t.Run("No types found", func(t *testing.T) {
+		l := &mocks.Loader{}
+		l.On("LoadMatched", "./testpkg.go", []string{"MyService"}, loader.FileLoadMode).
+			Return(map[string]*loader.Result{}, nil)
+
+		exec := executor.New(l)
+		got, err := exec.Execute(&executor.Parameters{
+			Sources:               []string{"./testpkg.go"},
+			Targets:               []string{"MyService"},
+			OutPkg:                "testpkg",
+			IgnoreNoReturnMethods: false,
+		})
+		require.EqualError(t, err, executor.ErrNoTargetableTypesFound.Error())
+		require.Nil(t, got)
+	})
 }
 
 func createTestInterfaceType() *types.Interface {

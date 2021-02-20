@@ -69,4 +69,23 @@ func TestRootCommand(t *testing.T) {
 		c.SetArgs([]string{"--src=/path/to/target.go", "--target=Client", "--target=SomeOtherClient", "--outputdir=./reinforced", "--ignorenoret"})
 		require.NoError(t, c.Execute())
 	})
+
+	t.Run("No targets found", func(t *testing.T) {
+		exec := &mocks.Executor{}
+		exec.On("Execute", &executor.Parameters{
+			Sources:               []string{"/path/to/target.go"},
+			Targets:               []string{},
+			TargetsAll:            true,
+			OutPkg:                "reinforced",
+			IgnoreNoReturnMethods: false,
+		}).Return(nil, executor.ErrNoTargetableTypesFound)
+		writ := &mocks.Writer{}
+		writ.On("Write", "./reinforced", gen).Return(nil)
+
+		b := bytes.NewBufferString("")
+		c := cmd.NewRootCmd(exec, writ)
+		c.SetOut(b)
+		c.SetArgs([]string{"--src=/path/to/target.go", "--targetall", "--outputdir=./reinforced"})
+		require.EqualError(t, c.Execute(), "failed to generate code; error=no targetable types were discovered")
+	})
 }
