@@ -13,13 +13,15 @@ var ClientMethods = struct {
 
 // SomeOtherClientMethods are the methods in SomeOtherClient
 var SomeOtherClientMethods = struct {
-	DoStuff           string
-	GetUser           string
-	MethodWithChannel string
-	SaveFile          string
+	DoStuff            string
+	GetUser            string
+	MethodWithChannel  string
+	MethodWithWildcard string
+	SaveFile           string
 }{
-	DoStuff:           "DoStuff",
-	GetUser:           "GetUser",
-	MethodWithChannel: "MethodWithChannel",
-	SaveFile:          "SaveFile",
+	DoStuff:            "DoStuff",
+	GetUser:            "GetUser",
+	MethodWithChannel:  "MethodWithChannel",
+	MethodWithWildcard: "MethodWithWildcard",
+	SaveFile:           "SaveFile",
 }

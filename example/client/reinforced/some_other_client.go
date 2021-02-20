@@ -13,6 +13,7 @@ type targetSomeOtherClient interface {
 	DoStuff() error
 	GetUser(ctx context.Context) (*sub.User, error)
 	MethodWithChannel(arg0 <-chan bool) error
+	MethodWithWildcard(arg0 interface{})
 	SaveFile(arg0 *client.File, arg1 *os.File) error
 }
 type SomeOtherClient struct {
@@ -87,6 +88,15 @@ func (s *SomeOtherClient) MethodWithChannel(arg0 <-chan bool) error {
 		return nonRetryableErr
 	}
 	return err
+}
+func (s *SomeOtherClient) MethodWithWildcard(arg0 interface{}) {
+	err := s.run(context.Background(), SomeOtherClientMethods.MethodWithWildcard, func(_ context.Context) error {
+		s.delegate.MethodWithWildcard(arg0)
+		return nil
+	})
+	if err != nil {
+		panic(err)
+	}
 }
 func (s *SomeOtherClient) SaveFile(arg0 *client.File, arg1 *os.File) error {
 	var nonRetryableErr error

@@ -27,6 +27,7 @@ type SomeOtherClient interface {
 	SaveFile(myFile *File, osFile *os.File) error
 	GetUser(ctx context.Context) (*sub.User, error)
 	MethodWithChannel(myChan <- chan bool) error
+	MethodWithWildcard(arg interface{})
 }
 
 // FakeClient is a Client implementation that will randomly fail
