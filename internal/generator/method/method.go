@@ -223,9 +223,6 @@ func toType(basePkg *types.Package, t types.Type, variadic bool) (jen.Code, erro
 		}
 		return jen.Op("*").Add(rt), nil
 	case *types.Interface:
-		//if v.NumMethods() != 0 {
-		//	panic("Unable to mock inline interfaces with methods")
-		//}
 		return jen.Id("interface{}"), nil
 	case *types.Slice:
 		elemType, err := toType(basePkg, v.Elem(), false)
