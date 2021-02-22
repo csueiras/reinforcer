@@ -33,6 +33,12 @@ Install through [Homebrew](https://brew.sh/)
 brew tap csueiras/reinforcer && brew install reinforcer
 ```
 
+#### Upgrading
+
+```
+brew upgrade csueiras/reinforcer/reinforcer
+```
+
 ## Usage
 
 ### CLI
