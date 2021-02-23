@@ -64,12 +64,7 @@ func (e *Executor) Execute(settings *Parameters) (*generator.Generated, error) {
 				return nil, fmt.Errorf("multiple types with same name discovered with name %s", typName)
 			}
 			results[typName] = res.InterfaceType
-
-			cfg = append(cfg, &generator.FileConfig{
-				SrcTypeName:   typName,
-				OutTypeName:   typName,
-				InterfaceType: res.InterfaceType,
-			})
+			cfg = append(cfg, generator.NewFileConfig(typName, typName, res.InterfaceType))
 		}
 	}
 

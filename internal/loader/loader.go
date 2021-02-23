@@ -137,7 +137,7 @@ func (l *Loader) loadExpr(path string, expr *regexp.Regexp, mode LoadMode) (*pac
 
 func (l *Loader) load(path string, mode LoadMode) ([]*packages.Package, error) {
 	cfg := &packages.Config{
-		Mode: packages.NeedTypes | packages.NeedImports,
+		Mode: packages.NeedTypes | packages.NeedImports | packages.NeedSyntax,
 	}
 
 	var pkgs []*packages.Package

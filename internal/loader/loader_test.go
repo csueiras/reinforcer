@@ -52,7 +52,7 @@ type HelloWorldService interface {
 }
 
 type unexportedService interface {
-	ShouldNotBeSeen()
+	HelloWorld()
 }
 
 type NotAnInterface struct {
@@ -71,11 +71,13 @@ type NotAnInterface struct {
 		results, err := l.LoadMatched("github.com/csueiras/fake", []string{".*Service"}, loader.PackageLoadMode)
 		require.NoError(t, err)
 		require.NotNil(t, results)
-		require.Equal(t, 2, len(results))
+		require.Equal(t, 3, len(results))
 		require.NotNil(t, results["UserService"])
 		require.Equal(t, "interface{GetUserID(ctx context.Context, userID string) (string, error)}", results["UserService"].InterfaceType.String())
 		require.NotNil(t, results["HelloWorldService"])
 		require.Equal(t, "interface{Hello(ctx context.Context, name string) error}", results["HelloWorldService"].InterfaceType.String())
+		require.NotNil(t, results["unexportedService"])
+		require.Equal(t, "interface{HelloWorld()}", results["unexportedService"].InterfaceType.String())
 	})
 
 	t.Run("Multiple RegEx Expressions", func(t *testing.T) {

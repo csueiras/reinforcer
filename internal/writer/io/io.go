@@ -41,7 +41,7 @@ func (F *FSOutputProvider) GetOutputTarget(filename string) (io.WriteCloser, err
 
 	filename = path.Base(filename)
 	fullPath := path.Join(dir, filename)
-	f, err := os.OpenFile(fullPath, os.O_RDWR|os.O_CREATE, 0755)
+	f, err := os.Create(fullPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file %s; error=%w", fullPath, err)
 	}
