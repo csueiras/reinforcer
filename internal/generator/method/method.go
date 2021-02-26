@@ -227,6 +227,6 @@ func toType(t types.Type, variadic bool) (jen.Code, error) {
 	case named:
 		return jen.Id(v.Name()), nil
 	default:
-		return nil, fmt.Errorf("type not hanled: %T", v)
+		return nil, fmt.Errorf("type not handled: %T", v)
 	}
 }
