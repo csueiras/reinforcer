@@ -111,7 +111,9 @@ r := runner.NewFactory(
 3. Optionally create your predicate for errors that shouldn't be retried
 
 ```
-errPredicate := func(method string, err error) bool {
+// shouldRetryErrPredicate is a predicate that ignores the "NotFound" errors emited by the DoOperation in Client. All other errors
+// are eligible for the middlewares.
+shouldRetryErrPredicate := func(method string, err error) bool {
     if method == reinforced.ClientMethods.DoOperation && errors.Is(client.NotFound, err) {
         return false
     }
@@ -126,7 +128,7 @@ c := client.NewClient(...)
 
 // reinforcedClient implements the target interface so it can now be used in lieau of any place where the unreliable
 // client was used
-reinforcedClient := reinforced.NewClient(c, r, reinforced.WithRetryableErrorPredicate(errPredicate))
+reinforcedClient := reinforced.NewClient(c, r, reinforced.WithRetryableErrorPredicate(shouldRetryErrPredicate))
 ```
 
 A complete example is [here](./example/main.go) 
