@@ -9,7 +9,7 @@ Reinforcer is a code generation tool that automates middleware injection in a pr
 implementation, this aids in building more resilient code as you can use common resiliency patterns in the middlewares
 such as circuit breakers, retrying, timeouts and others.
 
-**NOTE:** _While version is < 1.0.0 the APIs might dramatically change between minor changes, any breaking changes will be enumerated here starting with version 0.7.0 and forward._
+**NOTE:** _While version is < 1.0.0 the APIs might dramatically change between minor versions, any breaking changes will be enumerated here starting with version 0.7.0 and forward._
 
 ## Install
 
