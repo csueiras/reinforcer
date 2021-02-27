@@ -226,6 +226,16 @@ func toType(t types.Type, variadic bool) (jen.Code, error) {
 		return jen.Index().Add(elemType), nil
 	case named:
 		return jen.Id(v.Name()), nil
+	case *types.Map:
+		keyType, err := toType(v.Key(), false)
+		if err != nil {
+			return nil, err
+		}
+		elemType, err := toType(v.Elem(), false)
+		if err != nil {
+			return nil, err
+		}
+		return jen.Map(keyType).Add(elemType), nil
 	default:
 		return nil, fmt.Errorf("type not handled: %T", v)
 	}

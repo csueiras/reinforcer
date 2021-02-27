@@ -154,6 +154,23 @@ func TestNewMethod(t *testing.T) {
 				ReturnTypes:           []jen.Code{jen.Id("interface{}")},
 			},
 		},
+		{
+			name: "Fn(arg map[string]interface{}) map[string]int",
+			args: args{
+				name: "Fn",
+				signature: types.NewSignature(nil,
+					types.NewTuple(types.NewVar(token.NoPos, nil, "arg", types.NewMap(types.Typ[types.String], types.NewInterfaceType(nil, nil)))),
+					types.NewTuple(types.NewVar(token.NoPos, nil, "", types.NewMap(types.Typ[types.String], types.Typ[types.Int]))),
+					false),
+			},
+			want: &method.Method{
+				Name:                  "Fn",
+				HasContext:            false,
+				ParameterNames:        []string{"arg0"},
+				ParametersNameAndType: []jen.Code{jen.Id("arg0").Add(jen.Map(jen.Id("string")).Add(jen.Id("interface{}")))},
+				ReturnTypes:           []jen.Code{jen.Map(jen.Id("string")).Add(jen.Id("int"))},
+			},
+		},
 	}
 
 	for _, tt := range tests {
