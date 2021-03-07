@@ -1,3 +1,5 @@
+//nolint
+
 package testpkg
 
 import "context"
@@ -16,5 +18,4 @@ func (s *service) GetUserByID(_ context.Context, _ string) (string, error) {
 type anotherService struct{}
 
 func (a anotherService) DoOperation() {
-
 }
