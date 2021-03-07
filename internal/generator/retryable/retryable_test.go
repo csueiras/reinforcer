@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"github.com/csueiras/reinforcer/internal/generator/method"
 	"github.com/csueiras/reinforcer/internal/generator/retryable"
+	rtypes "github.com/csueiras/reinforcer/internal/types"
 	"github.com/stretchr/testify/require"
 	"go/token"
 	"go/types"
@@ -11,8 +12,8 @@ import (
 )
 
 func TestRetryable_Statement(t *testing.T) {
-	errVar := types.NewVar(token.NoPos, nil, "", method.ErrType)
-	ctxVar := types.NewVar(token.NoPos, nil, "ctx", method.ContextType)
+	errVar := types.NewVar(token.NoPos, nil, "", rtypes.ErrType)
+	ctxVar := types.NewVar(token.NoPos, nil, "ctx", rtypes.ContextType)
 
 	tests := []struct {
 		name       string
@@ -25,12 +26,12 @@ func TestRetryable_Statement(t *testing.T) {
 			name:       "Function returns error",
 			methodName: "MyFunction",
 			signature:  types.NewSignature(nil, types.NewTuple(), types.NewTuple(errVar), false),
-			want: `func (r *resilient) MyFunction() error {
+			want: `func (r *Resilient) MyFunction() error {
 	var nonRetryableErr error
-	err := r.run(context.Background(), ParentMethods.MyFunction, func(_ context.Context) error {
+	err := r.run(context.Background(), ResilientMethods.MyFunction, func(_ context.Context) error {
 		var err error
 		err = r.delegate.MyFunction()
-		if r.errorPredicate(ParentMethods.MyFunction, err) {
+		if r.errorPredicate(ResilientMethods.MyFunction, err) {
 			return err
 		}
 		nonRetryableErr = err
@@ -47,13 +48,13 @@ func TestRetryable_Statement(t *testing.T) {
 			name:       "Function returns string and error",
 			methodName: "MyFunction",
 			signature:  types.NewSignature(nil, types.NewTuple(), types.NewTuple(types.NewVar(token.NoPos, nil, "", types.Typ[types.String]), errVar), false),
-			want: `func (r *resilient) MyFunction() (string, error) {
+			want: `func (r *Resilient) MyFunction() (string, error) {
 	var nonRetryableErr error
 	var r0 string
-	err := r.run(context.Background(), ParentMethods.MyFunction, func(_ context.Context) error {
+	err := r.run(context.Background(), ResilientMethods.MyFunction, func(_ context.Context) error {
 		var err error
 		r0, err = r.delegate.MyFunction()
-		if r.errorPredicate(ParentMethods.MyFunction, err) {
+		if r.errorPredicate(ResilientMethods.MyFunction, err) {
 			return err
 		}
 		nonRetryableErr = err
@@ -73,13 +74,13 @@ func TestRetryable_Statement(t *testing.T) {
 				ctxVar,
 				types.NewVar(token.NoPos, nil, "myArg", types.Typ[types.String]),
 			), types.NewTuple(types.NewVar(token.NoPos, nil, "", types.Typ[types.String]), errVar), false),
-			want: `func (r *resilient) MyFunction(ctx context.Context, arg1 string) (string, error) {
+			want: `func (r *Resilient) MyFunction(ctx context.Context, arg1 string) (string, error) {
 	var nonRetryableErr error
 	var r0 string
-	err := r.run(ctx, ParentMethods.MyFunction, func(ctx context.Context) error {
+	err := r.run(ctx, ResilientMethods.MyFunction, func(ctx context.Context) error {
 		var err error
 		r0, err = r.delegate.MyFunction(ctx, arg1)
-		if r.errorPredicate(ParentMethods.MyFunction, err) {
+		if r.errorPredicate(ResilientMethods.MyFunction, err) {
 			return err
 		}
 		nonRetryableErr = err
@@ -96,9 +97,9 @@ func TestRetryable_Statement(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m, err := method.ParseMethod("Parent", tt.methodName, tt.signature)
+			m, err := method.ParseMethod(tt.methodName, tt.signature)
 			require.NoError(t, err)
-			ret := retryable.NewRetryable(m, "resilient", "r")
+			ret := retryable.NewRetryable(m, "Resilient", "r")
 			buf := &bytes.Buffer{}
 			s, err := ret.Statement()
 			if tt.wantErr {
@@ -117,9 +118,9 @@ func TestRetryable_Statement(t *testing.T) {
 
 	t.Run("Function does not return error", func(t *testing.T) {
 		require.Panics(t, func() {
-			m, err := method.ParseMethod("Parent", "Fn", types.NewSignature(nil, types.NewTuple(), types.NewTuple(), false))
+			m, err := method.ParseMethod("Fn", types.NewSignature(nil, types.NewTuple(), types.NewTuple(), false))
 			require.NoError(t, err)
-			retryable.NewRetryable(m, "resilient", "r")
+			retryable.NewRetryable(m, "Resilient", "r")
 		})
 	})
 }

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"github.com/csueiras/reinforcer/internal/generator/method"
 	"github.com/csueiras/reinforcer/internal/generator/noret"
+	rtypes "github.com/csueiras/reinforcer/internal/types"
 	"github.com/stretchr/testify/require"
 	"go/token"
 	"go/types"
@@ -11,7 +12,7 @@ import (
 )
 
 func TestNoReturn_Statement(t *testing.T) {
-	ctxVar := types.NewVar(token.NoPos, nil, "ctx", method.ContextType)
+	ctxVar := types.NewVar(token.NoPos, nil, "ctx", rtypes.ContextType)
 
 	tests := []struct {
 		name       string
@@ -24,8 +25,8 @@ func TestNoReturn_Statement(t *testing.T) {
 			name:       "MyFunction()",
 			methodName: "MyFunction",
 			signature:  types.NewSignature(nil, types.NewTuple(), types.NewTuple(), false),
-			want: `func (r *resilient) MyFunction() {
-	err := r.run(context.Background(), ParentMethods.MyFunction, func(_ context.Context) error {
+			want: `func (r *Resilient) MyFunction() {
+	err := r.run(context.Background(), ResilientMethods.MyFunction, func(_ context.Context) error {
 		r.delegate.MyFunction()
 		return nil
 	})
@@ -42,8 +43,8 @@ func TestNoReturn_Statement(t *testing.T) {
 				ctxVar,
 				types.NewVar(token.NoPos, nil, "myArg", types.Typ[types.String]),
 			), types.NewTuple(types.NewVar(token.NoPos, nil, "", types.Typ[types.String])), false),
-			want: `func (r *resilient) MyFunction(ctx context.Context, arg1 string) {
-	err := r.run(ctx, ParentMethods.MyFunction, func(ctx context.Context) error {
+			want: `func (r *Resilient) MyFunction(ctx context.Context, arg1 string) {
+	err := r.run(ctx, ResilientMethods.MyFunction, func(ctx context.Context) error {
 		r.delegate.MyFunction(ctx, arg1)
 		return nil
 	})
@@ -57,9 +58,9 @@ func TestNoReturn_Statement(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m, err := method.ParseMethod("Parent", tt.methodName, tt.signature)
+			m, err := method.ParseMethod(tt.methodName, tt.signature)
 			require.NoError(t, err)
-			ret := noret.NewNoReturn(m, "resilient", "r")
+			ret := noret.NewNoReturn(m, "Resilient", "r")
 			buf := &bytes.Buffer{}
 			s, err := ret.Statement()
 			if tt.wantErr {
@@ -71,7 +72,6 @@ func TestNoReturn_Statement(t *testing.T) {
 				require.NoError(t, renderErr)
 
 				got := buf.String()
-				//fmt.Print(got)
 				require.Equal(t, tt.want, got)
 			}
 		})

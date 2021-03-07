@@ -921,7 +921,7 @@ func loadInterface(t *testing.T, filesCode map[string]input) []*generator.FileCo
 		require.NoError(t, err)
 		loadedTypes = append(loadedTypes, generator.NewFileConfig(in.interfaceName,
 			fmt.Sprintf("Generated%s", strings.Title(in.interfaceName)),
-			svc.InterfaceType,
+			svc.Methods,
 		))
 	}
 	return loadedTypes

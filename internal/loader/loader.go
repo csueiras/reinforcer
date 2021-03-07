@@ -2,12 +2,15 @@ package loader
 
 import (
 	"fmt"
+	"github.com/csueiras/reinforcer/internal/generator/method"
 	"github.com/rs/zerolog/log"
+	"go/ast"
 	"go/types"
 	"golang.org/x/tools/go/packages"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"unicode"
 )
 
 // LoadMode determines how a path should be loaded
@@ -38,8 +41,8 @@ func (l *LoadingError) Error() string {
 
 // Result holds the results of loading a particular type
 type Result struct {
-	Name          string
-	InterfaceType *types.Interface
+	Name    string
+	Methods []*method.Method
 }
 
 // Loader is a utility service for extracting type information from a go package
@@ -114,22 +117,42 @@ func (l *Loader) loadExpr(path string, expr *regexp.Regexp, mode LoadMode) (*pac
 	pkg := pkgs[0]
 	typesFound := pkg.Types.Scope().Names()
 	results := make(map[string]*Result)
+
+	var matchingTypes []string
 	for _, typeFound := range typesFound {
 		if expr.MatchString(typeFound) {
-			obj := pkg.Types.Scope().Lookup(typeFound)
-			if obj == nil {
-				return nil, nil, fmt.Errorf("%s not found in declared types of %s", typeFound, pkg)
+			matchingTypes = append(matchingTypes, typeFound)
+		}
+	}
+
+	log.Info().Msgf("Matching types to target expressions: %s", strings.Join(matchingTypes, ", "))
+
+	for _, typeFound := range matchingTypes {
+		obj := pkg.Types.Scope().Lookup(typeFound)
+		if obj == nil {
+			return nil, nil, fmt.Errorf("%s not found in declared types of %s", typeFound, pkg)
+		}
+
+		switch typ := obj.Type().Underlying().(type) {
+		case *types.Interface:
+			log.Info().Msgf("Discovered interface type %s", typeFound)
+			result, err := loadFromInterface(typeFound, typ)
+			if err != nil {
+				return nil, nil, err
 			}
-			interfaceType, ok := obj.Type().Underlying().(*types.Interface)
-			if !ok {
-				log.Debug().Msgf("Ignoring matching type %s because it is not an interface type", typeFound)
-				continue
+			results[typeFound] = result
+		case *types.Struct:
+			log.Info().Msgf("Discovered struct type %s", typeFound)
+			result, err := loadFromStruct(pkg.Syntax[0], typeFound, pkg.TypesInfo)
+			if err != nil {
+				return nil, nil, err
 			}
-			log.Info().Msgf("Discovered type %s", typeFound)
-			results[typeFound] = &Result{
-				Name:          typeFound,
-				InterfaceType: interfaceType,
+
+			if len(result.Methods) > 0 {
+				results[typeFound] = result
 			}
+		default:
+			log.Debug().Msgf("Ignoring matching type %s because it is not an interface nor struct type", typeFound)
 		}
 	}
 	return pkg, results, nil
@@ -137,7 +160,7 @@ func (l *Loader) loadExpr(path string, expr *regexp.Regexp, mode LoadMode) (*pac
 
 func (l *Loader) load(path string, mode LoadMode) ([]*packages.Package, error) {
 	cfg := &packages.Config{
-		Mode: packages.NeedTypes | packages.NeedImports | packages.NeedSyntax,
+		Mode: packages.NeedTypes | packages.NeedImports | packages.NeedSyntax | packages.NeedTypesInfo,
 	}
 
 	var pkgs []*packages.Package
@@ -162,6 +185,70 @@ func (l *Loader) load(path string, mode LoadMode) ([]*packages.Package, error) {
 	return pkgs, nil
 }
 
+func loadFromInterface(name string, interfaceType *types.Interface) (*Result, error) {
+	result := &Result{
+		Name: name,
+	}
+	for m := 0; m < interfaceType.NumMethods(); m++ {
+		meth := interfaceType.Method(m)
+		mm, err := method.ParseMethod(meth.Name(), meth.Type().(*types.Signature))
+		if err != nil {
+			return nil, err
+		}
+		result.Methods = append(result.Methods, mm)
+	}
+	return result, nil
+}
+
+func loadFromStruct(f *ast.File, name string, info *types.Info) (*Result, error) {
+	result := &Result{
+		Name: name,
+	}
+	var firstError error
+	ast.Inspect(f, func(node ast.Node) bool {
+		fn, ok := node.(*ast.FuncDecl)
+		if !ok {
+			return true
+		}
+		if fn.Recv == nil {
+			return true
+		}
+		for _, l := range fn.Recv.List {
+			var ident *ast.Ident
+			switch t := l.Type.(type) {
+			case *ast.StarExpr:
+				ident = t.X.(*ast.Ident)
+			case *ast.Ident:
+				ident = t
+			}
+
+			if ident == nil || ident.Name != name {
+				continue
+			}
+
+			// Ignore unexported methods
+			if !unicode.IsUpper(rune(fn.Name.Name[0])) {
+				log.Debug().Msgf("Ignoring function %s as it is unexported", fn.Name.Name)
+				continue
+			}
+
+			meth, err := method.ParseMethod(fn.Name.Name, info.Defs[fn.Name].Type().(*types.Signature))
+			if err != nil {
+				if firstError == nil {
+					firstError = err
+				}
+				return false
+			}
+			result.Methods = append(result.Methods, meth)
+		}
+		return true
+	})
+	if firstError != nil {
+		return nil, firstError
+	}
+	return result, nil
+}
+
 func extractPackageErrors(pkgs []*packages.Package) error {
 	var errors []error
 	packages.Visit(pkgs, nil, func(pkg *packages.Package) {
@@ -178,13 +265,20 @@ func extractPackageErrors(pkgs []*packages.Package) error {
 }
 
 func exprToFilter(expressions []string) (*regexp.Regexp, error) {
-	expression := strings.Join(expressions, "|")
-	if strings.ContainsAny(expression, regexChars) {
-		filter, err := regexp.Compile(expression)
-		if err != nil {
-			return nil, fmt.Errorf("failed to compile expression %q; error=%w", expression, err)
+	var filter []string
+	for _, expr := range expressions {
+		if strings.ContainsAny(expr, regexChars) {
+			// RegEx expression
+			filter = append(filter, expr)
+		} else {
+			// Exact match
+			filter = append(filter, fmt.Sprintf("\\b%s\\b", expr))
 		}
-		return filter, nil
 	}
-	return regexp.MustCompile(fmt.Sprintf("\\b%s\\b", expression)), nil
+	expression := strings.Join(filter, "|")
+	reFilter, err := regexp.Compile(expression)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compile expression %q; error=%w", expression, err)
+	}
+	return reFilter, nil
 }

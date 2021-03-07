@@ -1,4 +1,4 @@
-//go:generate reinforcer --debug --target=Client --target=SomeOtherClient --outputdir=./reinforced
+//go:generate reinforcer --debug --target=Client --target=SomeOtherClient --target=Service --outputdir=./reinforced
 
 package client
 
@@ -26,8 +26,19 @@ type SomeOtherClient interface {
 	DoStuff() error
 	SaveFile(myFile *File, osFile *os.File) error
 	GetUser(ctx context.Context) (*sub.User, error)
-	MethodWithChannel(myChan <- chan bool) error
+	MethodWithChannel(myChan <-chan bool) error
 	MethodWithWildcard(arg interface{})
+}
+
+// Service is an example of a struct defined contract that will be reversed engineered by reinforcer
+type Service struct{}
+
+// GetData retrieves data it might randomly error out
+func (s *Service) GetData() ([]byte, error) {
+	if rand.Int()%5 == 0 {
+		return nil, fmt.Errorf("random failure")
+	}
+	return []byte{0xB, 0xE, 0xE, 0xF}, nil
 }
 
 // FakeClient is a Client implementation that will randomly fail

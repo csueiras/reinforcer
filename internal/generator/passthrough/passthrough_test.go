@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"github.com/csueiras/reinforcer/internal/generator/method"
 	"github.com/csueiras/reinforcer/internal/generator/passthrough"
+	rtypes "github.com/csueiras/reinforcer/internal/types"
 	"github.com/stretchr/testify/require"
 	"go/token"
 	"go/types"
@@ -11,7 +12,7 @@ import (
 )
 
 func TestPassThrough_Statement(t *testing.T) {
-	ctxVar := types.NewVar(token.NoPos, nil, "ctx", method.ContextType)
+	ctxVar := types.NewVar(token.NoPos, nil, "ctx", rtypes.ContextType)
 
 	tests := []struct {
 		name       string
@@ -57,7 +58,7 @@ func TestPassThrough_Statement(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m, err := method.ParseMethod("ParentType", tt.methodName, tt.signature)
+			m, err := method.ParseMethod(tt.methodName, tt.signature)
 			require.NoError(t, err)
 			ret := passthrough.NewPassThrough(m, "resilient", "r")
 			buf := &bytes.Buffer{}

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/csueiras/reinforcer/internal/generator"
 	"github.com/csueiras/reinforcer/internal/loader"
-	"go/types"
 )
 
 // ErrNoTargetableTypesFound indicates that no types that could be targeted for code generation were discovered
@@ -44,7 +43,8 @@ func New(l Loader) *Executor {
 
 // Execute orchestrates code generation sourced from multiple files/targets
 func (e *Executor) Execute(settings *Parameters) (*generator.Generated, error) {
-	results := make(map[string]*types.Interface)
+	discoveredTypes := make(map[string]struct{})
+
 	var cfg []*generator.FileConfig
 	var err error
 	for _, source := range settings.Sources {
@@ -60,11 +60,11 @@ func (e *Executor) Execute(settings *Parameters) (*generator.Generated, error) {
 
 		// Check types aren't repeated before adding them to the generator's config
 		for typName, res := range match {
-			if _, ok := results[typName]; ok {
+			if _, ok := discoveredTypes[typName]; ok {
 				return nil, fmt.Errorf("multiple types with same name discovered with name %s", typName)
 			}
-			results[typName] = res.InterfaceType
-			cfg = append(cfg, generator.NewFileConfig(typName, typName, res.InterfaceType))
+			discoveredTypes[typName] = struct{}{}
+			cfg = append(cfg, generator.NewFileConfig(typName, typName, res.Methods))
 		}
 	}
 

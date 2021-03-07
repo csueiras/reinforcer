@@ -2,7 +2,7 @@ package method
 
 import (
 	"fmt"
-	"github.com/csueiras/reinforcer/internal/loader"
+	rtypes "github.com/csueiras/reinforcer/internal/types"
 	"github.com/dave/jennifer/jen"
 	"go/types"
 )
@@ -15,36 +15,8 @@ type named interface {
 	Name() string
 }
 
-// ErrType is the types.Type for the error interface
-var ErrType types.Type
-
-// ContextType is the types.Type for the context.Context interface
-var ContextType *types.Interface
-
-func init() {
-	errType := types.NewInterfaceType([]*types.Func{
-		types.NewFunc(0, nil, "Error",
-			types.NewSignature(
-				nil,
-				types.NewTuple(),
-				types.NewTuple(types.NewParam(0, nil, "", types.Typ[types.String])),
-				false,
-			),
-		),
-	}, nil)
-	errType.Complete()
-	ErrType = types.NewNamed(types.NewTypeName(0, nil, "error", nil), errType, nil)
-
-	iface, err := loader.DefaultLoader().LoadOne("context", "Context", loader.PackageLoadMode)
-	if err != nil {
-		panic(err)
-	}
-	ContextType = iface.InterfaceType
-}
-
 // Method holds all of the data for code generation on a specific method signature
 type Method struct {
-	ParentTypeName        string
 	Name                  string
 	HasContext            bool
 	ReturnsError          bool
@@ -57,8 +29,8 @@ type Method struct {
 }
 
 // ConstantRef is the reference to the constant for this method's name
-func (m *Method) ConstantRef() jen.Code {
-	constantsStructName := fmt.Sprintf("%sMethods", m.ParentTypeName)
+func (m *Method) ConstantRef(parentTypeName string) jen.Code {
+	constantsStructName := fmt.Sprintf("%sMethods", parentTypeName)
 	return jen.Id(constantsStructName).Dot(m.Name)
 }
 
@@ -89,10 +61,18 @@ func (m *Method) Parameters() []jen.Code {
 	return params
 }
 
+// MustParseMethod parses the given types.Signature and generates a Method, if there's an error this method will panic
+func MustParseMethod(name string, signature *types.Signature) *Method {
+	m, err := ParseMethod(name, signature)
+	if err != nil {
+		panic(err)
+	}
+	return m
+}
+
 // ParseMethod parses the given types.Signature and generates a Method
-func ParseMethod(parentTypeName, name string, signature *types.Signature) (*Method, error) {
+func ParseMethod(name string, signature *types.Signature) (*Method, error) {
 	m := &Method{
-		ParentTypeName:   parentTypeName,
 		Name:             name,
 		ReturnErrorIndex: nil,
 		ContextParameter: nil,
@@ -103,7 +83,7 @@ func ParseMethod(parentTypeName, name string, signature *types.Signature) (*Meth
 	numParams := signature.Params().Len()
 	for i, lastIndex := 0, numParams-1; i < numParams; i++ {
 		param := signature.Params().At(i)
-		if isContextType(param.Type()) {
+		if rtypes.IsContextType(param.Type()) {
 			m.HasContext = true
 			m.ContextParameter = new(int)
 			*m.ContextParameter = i
@@ -126,7 +106,7 @@ func ParseMethod(parentTypeName, name string, signature *types.Signature) (*Meth
 		if err != nil {
 			panic(err)
 		}
-		if isErrorType(res.Type()) {
+		if rtypes.IsErrorType(res.Type()) {
 			if m.ReturnErrorIndex != nil {
 				return nil, fmt.Errorf("multiple errors returned by method signature")
 			}
@@ -137,25 +117,6 @@ func ParseMethod(parentTypeName, name string, signature *types.Signature) (*Meth
 		m.ReturnTypes = append(m.ReturnTypes, resType)
 	}
 	return m, nil
-}
-
-// isErrorType determines if the given type implements the Error interface
-func isErrorType(t types.Type) bool {
-	if t == nil {
-		return false
-	}
-	return types.Implements(t, ErrType.Underlying().(*types.Interface))
-}
-
-// isContextType determines if the given type is context.Context
-func isContextType(t types.Type) bool {
-	if t == nil {
-		return false
-	}
-	if t.String() == "context.Context" {
-		return true
-	}
-	return types.Implements(t, ContextType)
 }
 
 // variadicToType generates the representation for a variadic type "...MyType"

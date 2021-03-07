@@ -11,6 +11,13 @@ var ClientMethods = struct {
 	SayHello:         "SayHello",
 }
 
+// ServiceMethods are the methods in Service
+var ServiceMethods = struct {
+	GetData string
+}{
+	GetData: "GetData",
+}
+
 // SomeOtherClientMethods are the methods in SomeOtherClient
 var SomeOtherClientMethods = struct {
 	DoStuff            string
