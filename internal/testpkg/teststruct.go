@@ -1,5 +1,4 @@
 //nolint
-
 package testpkg
 
 import "context"
