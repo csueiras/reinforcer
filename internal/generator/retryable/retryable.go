@@ -13,8 +13,7 @@ const (
 
 // Retryable is a code generator for a method that can be retried on error
 type Retryable struct {
-	method *method.Method
-	//originalTypeName string
+	method       *method.Method
 	structName   string
 	receiverName string
 }
