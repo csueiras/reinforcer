@@ -9,7 +9,6 @@ import (
 	"github.com/csueiras/reinforcer/internal/generator/retryable"
 	"github.com/dave/jennifer/jen"
 	"github.com/rs/zerolog/log"
-	"go/types"
 	"strings"
 )
 
@@ -21,16 +20,16 @@ type FileConfig struct {
 	srcTypeName string
 	// outTypeName is the desired output type name
 	outTypeName string
-	// interfaceType holds the type information for SrcTypeName
-	interfaceType *types.Interface
+	// methods that should be in the generated type
+	methods []*method.Method
 }
 
 // NewFileConfig creates a new instance of the FileConfig which holds code generation configuration
-func NewFileConfig(srcTypeName string, outTypeName string, interfaceType *types.Interface) *FileConfig {
+func NewFileConfig(srcTypeName, outTypeName string, methods []*method.Method) *FileConfig {
 	return &FileConfig{
-		srcTypeName:   strings.Title(srcTypeName),
-		outTypeName:   strings.Title(outTypeName),
-		interfaceType: interfaceType,
+		srcTypeName: strings.Title(srcTypeName),
+		outTypeName: strings.Title(outTypeName),
+		methods:     methods,
 	}
 }
 
@@ -97,10 +96,7 @@ func Generate(cfg Config) (*Generated, error) {
 	var fileMethods []*fileMeta
 
 	for _, fileConfig := range cfg.Files {
-		methods, err := parseMethods(fileConfig.outTypeName, fileConfig.interfaceType)
-		if err != nil {
-			return nil, err
-		}
+		methods := fileConfig.methods
 		s, err := generateFile(cfg.OutPkg, cfg.IgnoreNoReturnMethods, fileConfig, methods)
 		if err != nil {
 			return nil, err
@@ -266,19 +262,6 @@ func generateConstants(outPkg string, meta []*fileMeta) (string, error) {
 	}
 
 	return renderToString(f)
-}
-
-func parseMethods(typeName string, interfaceType *types.Interface) ([]*method.Method, error) {
-	var methods []*method.Method
-	for m := 0; m < interfaceType.NumMethods(); m++ {
-		meth := interfaceType.Method(m)
-		mm, err := method.ParseMethod(typeName, meth.Name(), meth.Type().(*types.Signature))
-		if err != nil {
-			return nil, err
-		}
-		methods = append(methods, mm)
-	}
-	return methods, nil
 }
 
 func renderToString(f *jen.File) (string, error) {

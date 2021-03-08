@@ -3,9 +3,9 @@ package executor_test
 import (
 	"github.com/csueiras/reinforcer/internal/generator/executor"
 	"github.com/csueiras/reinforcer/internal/generator/executor/mocks"
+	"github.com/csueiras/reinforcer/internal/generator/method"
 	"github.com/csueiras/reinforcer/internal/loader"
 	"github.com/stretchr/testify/require"
-	"go/token"
 	"go/types"
 	"testing"
 )
@@ -16,8 +16,8 @@ func TestExecutor_Execute(t *testing.T) {
 		l.On("LoadMatched", "./testpkg.go", []string{"MyService"}, loader.FileLoadMode).Return(
 			map[string]*loader.Result{
 				"LockService": {
-					Name:          "LockService",
-					InterfaceType: createTestInterfaceType(),
+					Name:    "LockService",
+					Methods: createTestServiceMethods(),
 				},
 			}, nil,
 		)
@@ -52,11 +52,10 @@ func TestExecutor_Execute(t *testing.T) {
 	})
 }
 
-func createTestInterfaceType() *types.Interface {
+func createTestServiceMethods() []*method.Method {
 	nullary := types.NewSignature(nil, nil, nil, false) // func()
-	methods := []*types.Func{
-		types.NewFunc(token.NoPos, nil, "Lock", nullary),
-		types.NewFunc(token.NoPos, nil, "Unlock", nullary),
+	return []*method.Method{
+		method.MustParseMethod("Lock", nullary),
+		method.MustParseMethod("Unlock", nullary),
 	}
-	return types.NewInterfaceType(methods, nil).Complete()
 }

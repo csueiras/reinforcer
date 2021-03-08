@@ -36,7 +36,7 @@ func (p *NoReturn) Statement() (*jen.Statement, error) {
 	)
 
 	return jen.Func().Params(jen.Id(p.receiverName).Op("*").Id(p.structName)).Id(p.method.Name).Call(methodArgParams...).Block(
-		jen.Id("err").Op(":=").Id(p.receiverName).Dot("run").Call(ctxParam, p.method.ConstantRef(), call),
+		jen.Id("err").Op(":=").Id(p.receiverName).Dot("run").Call(ctxParam, p.method.ConstantRef(p.structName), call),
 		jen.If(jen.Id("err").Op("!=").Nil()).Block(
 			jen.Panic(jen.Id("err")),
 		),

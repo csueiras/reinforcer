@@ -10,10 +10,11 @@ import (
 )
 
 func TestLoad(t *testing.T) {
-	exported := packagestest.Export(t, packagestest.GOPATH, []packagestest.Module{{
-		Name: "github.com/csueiras",
-		Files: map[string]interface{}{
-			"fake/fake.go": `package fake
+	t.Run("Load Interface", func(t *testing.T) {
+		exported := packagestest.Export(t, packagestest.GOPATH, []packagestest.Module{{
+			Name: "github.com/csueiras",
+			Files: map[string]interface{}{
+				"fake/fake.go": `package fake
 
 import "context"
 
@@ -21,18 +22,52 @@ type Service interface {
 	GetUserID(ctx context.Context, userID string) (string, error)
 }
 `,
-		}}})
-	defer exported.Cleanup()
+			}}})
+		defer exported.Cleanup()
 
-	l := loader.NewLoader(func(cfg *packages.Config, patterns ...string) ([]*packages.Package, error) {
-		exported.Config.Mode = cfg.Mode
-		return packages.Load(exported.Config, patterns...)
+		l := loader.NewLoader(func(cfg *packages.Config, patterns ...string) ([]*packages.Package, error) {
+			exported.Config.Mode = cfg.Mode
+			return packages.Load(exported.Config, patterns...)
+		})
+
+		svc, err := l.LoadOne("github.com/csueiras/fake", "Service", loader.PackageLoadMode)
+		require.NoError(t, err)
+		require.NotNil(t, svc)
+		require.Equal(t, "Service", svc.Name)
+		require.Equal(t, 1, len(svc.Methods))
+		require.Equal(t, "GetUserID", svc.Methods[0].Name)
 	})
 
-	svc, err := l.LoadOne("github.com/csueiras/fake", "Service", loader.PackageLoadMode)
-	require.NoError(t, err)
-	require.NotNil(t, svc)
-	require.Equal(t, "interface{GetUserID(ctx context.Context, userID string) (string, error)}", svc.InterfaceType.String())
+	t.Run("Load Struct", func(t *testing.T) {
+		exported := packagestest.Export(t, packagestest.GOPATH, []packagestest.Module{{
+			Name: "github.com/csueiras",
+			Files: map[string]interface{}{
+				"fake/fake.go": `package fake
+
+import "context"
+
+type service struct {	
+}
+
+func (s *service) GetUserID(ctx context.Context, userID string) (string, error) {
+	return "My User", nil
+}
+`,
+			}}})
+		defer exported.Cleanup()
+
+		l := loader.NewLoader(func(cfg *packages.Config, patterns ...string) ([]*packages.Package, error) {
+			exported.Config.Mode = cfg.Mode
+			return packages.Load(exported.Config, patterns...)
+		})
+
+		svc, err := l.LoadOne("github.com/csueiras/fake", "service", loader.PackageLoadMode)
+		require.NoError(t, err)
+		require.NotNil(t, svc)
+		require.Equal(t, "service", svc.Name)
+		require.Equal(t, 1, len(svc.Methods))
+		require.Equal(t, "GetUserID", svc.Methods[0].Name)
+	})
 }
 
 func TestLoadMatched(t *testing.T) {
@@ -55,7 +90,7 @@ type unexportedService interface {
 	HelloWorld()
 }
 
-type NotAnInterface struct {
+type StructWithNoMethods struct {
 	SomeField string
 }
 `,
@@ -72,12 +107,18 @@ type NotAnInterface struct {
 		require.NoError(t, err)
 		require.NotNil(t, results)
 		require.Equal(t, 3, len(results))
-		require.NotNil(t, results["UserService"])
-		require.Equal(t, "interface{GetUserID(ctx context.Context, userID string) (string, error)}", results["UserService"].InterfaceType.String())
-		require.NotNil(t, results["HelloWorldService"])
-		require.Equal(t, "interface{Hello(ctx context.Context, name string) error}", results["HelloWorldService"].InterfaceType.String())
-		require.NotNil(t, results["unexportedService"])
-		require.Equal(t, "interface{HelloWorld()}", results["unexportedService"].InterfaceType.String())
+
+		require.Equal(t, "UserService", results["UserService"].Name)
+		require.Equal(t, 1, len(results["UserService"].Methods))
+		require.Equal(t, "GetUserID", results["UserService"].Methods[0].Name)
+
+		require.Equal(t, "HelloWorldService", results["HelloWorldService"].Name)
+		require.Equal(t, 1, len(results["HelloWorldService"].Methods))
+		require.Equal(t, "Hello", results["HelloWorldService"].Methods[0].Name)
+
+		require.Equal(t, "unexportedService", results["unexportedService"].Name)
+		require.Equal(t, 1, len(results["unexportedService"].Methods))
+		require.Equal(t, "HelloWorld", results["unexportedService"].Methods[0].Name)
 	})
 
 	t.Run("Multiple RegEx Expressions", func(t *testing.T) {
@@ -90,10 +131,14 @@ type NotAnInterface struct {
 		require.NoError(t, err)
 		require.NotNil(t, results)
 		require.Equal(t, 2, len(results))
-		require.NotNil(t, results["UserService"])
-		require.Equal(t, "interface{GetUserID(ctx context.Context, userID string) (string, error)}", results["UserService"].InterfaceType.String())
-		require.NotNil(t, results["HelloWorldService"])
-		require.Equal(t, "interface{Hello(ctx context.Context, name string) error}", results["HelloWorldService"].InterfaceType.String())
+
+		require.Equal(t, "UserService", results["UserService"].Name)
+		require.Equal(t, 1, len(results["UserService"].Methods))
+		require.Equal(t, "GetUserID", results["UserService"].Methods[0].Name)
+
+		require.Equal(t, "HelloWorldService", results["HelloWorldService"].Name)
+		require.Equal(t, 1, len(results["HelloWorldService"].Methods))
+		require.Equal(t, "Hello", results["HelloWorldService"].Methods[0].Name)
 	})
 
 	t.Run("Exact Match", func(t *testing.T) {
@@ -106,8 +151,9 @@ type NotAnInterface struct {
 		require.NoError(t, err)
 		require.NotNil(t, results)
 		require.Equal(t, 1, len(results))
-		require.NotNil(t, results["HelloWorldService"])
-		require.Equal(t, "interface{Hello(ctx context.Context, name string) error}", results["HelloWorldService"].InterfaceType.String())
+		require.Equal(t, "HelloWorldService", results["HelloWorldService"].Name)
+		require.Equal(t, 1, len(results["HelloWorldService"].Methods))
+		require.Equal(t, "Hello", results["HelloWorldService"].Methods[0].Name)
 	})
 
 	t.Run("Exact Match: No Match", func(t *testing.T) {
@@ -128,13 +174,17 @@ type NotAnInterface struct {
 			return packages.Load(exported.Config, patterns...)
 		})
 
-		results, err := l.LoadMatched("github.com/csueiras/fake", []string{"UserService", "HelloWorldService", "NotAnInterface"}, loader.PackageLoadMode)
+		results, err := l.LoadMatched("github.com/csueiras/fake", []string{"UserService", "HelloWorldService", "StructWithNoMethods"}, loader.PackageLoadMode)
 		require.NoError(t, err)
 		require.NotNil(t, results)
 		require.Equal(t, 2, len(results))
-		require.NotNil(t, results["UserService"])
-		require.Equal(t, "interface{GetUserID(ctx context.Context, userID string) (string, error)}", results["UserService"].InterfaceType.String())
-		require.NotNil(t, results["HelloWorldService"])
-		require.Equal(t, "interface{Hello(ctx context.Context, name string) error}", results["HelloWorldService"].InterfaceType.String())
+
+		require.Equal(t, "UserService", results["UserService"].Name)
+		require.Equal(t, 1, len(results["UserService"].Methods))
+		require.Equal(t, "GetUserID", results["UserService"].Methods[0].Name)
+
+		require.Equal(t, "HelloWorldService", results["HelloWorldService"].Name)
+		require.Equal(t, 1, len(results["HelloWorldService"].Methods))
+		require.Equal(t, "Hello", results["HelloWorldService"].Methods[0].Name)
 	})
 }

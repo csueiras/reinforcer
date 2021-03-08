@@ -80,7 +80,7 @@ func (r *Retryable) methodCall() ([]jen.Code, error) {
 		// if r.errorPredicate(methodName, err) {
 		//  return err
 		// }
-		jen.If(jen.Id(r.receiverName).Dot("errorPredicate").Call(r.method.ConstantRef(), jen.Id(errVarName))).Block(
+		jen.If(jen.Id(r.receiverName).Dot("errorPredicate").Call(r.method.ConstantRef(r.structName), jen.Id(errVarName))).Block(
 			jen.Return(jen.Id("err")),
 		),
 		// nonRetryableErr = err
@@ -89,7 +89,7 @@ func (r *Retryable) methodCall() ([]jen.Code, error) {
 		jen.Return(jen.Nil()),
 	)
 
-	statements = append(statements, jen.Id("err").Op(":=").Id(r.receiverName).Dot("run").Call(ctxParam, r.method.ConstantRef(), call))
+	statements = append(statements, jen.Id("err").Op(":=").Id(r.receiverName).Dot("run").Call(ctxParam, r.method.ConstantRef(r.structName), call))
 
 	nonRetryErrReturns := make([]jen.Code, len(returnVars))
 	copy(nonRetryErrReturns, returnVars)
