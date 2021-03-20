@@ -16,6 +16,17 @@ import (
 // LoadMode determines how a path should be loaded
 type LoadMode int
 
+func (l LoadMode) String() string {
+	switch l {
+	case PackageLoadMode:
+		return "PackageLoadMode"
+	case FileLoadMode:
+		return "FileLoadMode"
+	default:
+		return fmt.Sprintf("Unknown (%d)", l)
+	}
+}
+
 const (
 	// PackageLoadMode indicates that the path is an import path and should be loaded with that context
 	PackageLoadMode LoadMode = iota
@@ -102,6 +113,11 @@ func (l *Loader) LoadMatched(path string, expressions []string, mode LoadMode) (
 }
 
 func (l *Loader) loadExpr(path string, expr *regexp.Regexp, mode LoadMode) (*packages.Package, map[string]*Result, error) {
+	logger := log.With().
+		Str("mode", mode.String()).
+		Str("path", path).
+		Str("expr", expr.String()).Logger()
+
 	pkgs, err := l.load(path, mode)
 	if err != nil {
 		return nil, nil, err
@@ -115,7 +131,27 @@ func (l *Loader) loadExpr(path string, expr *regexp.Regexp, mode LoadMode) (*pac
 	}
 
 	pkg := pkgs[0]
-	typesFound := pkg.Types.Scope().Names()
+	goFiles := pkg.GoFiles
+
+	var typesFound []string
+	if mode == FileLoadMode {
+		var targetFileIndex int
+		for idx, goFile := range goFiles {
+			if path == goFile {
+				logger.Trace().Msgf("Target file found at index %d",  idx)
+				targetFileIndex = idx
+				break
+			}
+		}
+
+		for typeFound := range pkg.Syntax[targetFileIndex].Scope.Objects {
+			typesFound = append(typesFound, typeFound)
+			logger.Debug().Msgf("Target file contains type %s", typeFound)
+		}
+	} else {
+		typesFound = pkg.Types.Scope().Names()
+	}
+
 	results := make(map[string]*Result)
 
 	var matchingTypes []string
@@ -125,7 +161,7 @@ func (l *Loader) loadExpr(path string, expr *regexp.Regexp, mode LoadMode) (*pac
 		}
 	}
 
-	log.Info().Msgf("Matching types to target expressions: %s", strings.Join(matchingTypes, ", "))
+	logger.Info().Msgf("Matching types to target expressions: %s", strings.Join(matchingTypes, ", "))
 
 	for _, typeFound := range matchingTypes {
 		obj := pkg.Types.Scope().Lookup(typeFound)
@@ -135,14 +171,14 @@ func (l *Loader) loadExpr(path string, expr *regexp.Regexp, mode LoadMode) (*pac
 
 		switch typ := obj.Type().Underlying().(type) {
 		case *types.Interface:
-			log.Info().Msgf("Discovered interface type %s", typeFound)
+			logger.Info().Msgf("Discovered interface type %s", typeFound)
 			result, err := loadFromInterface(typeFound, typ)
 			if err != nil {
 				return nil, nil, err
 			}
 			results[typeFound] = result
 		case *types.Struct:
-			log.Info().Msgf("Discovered struct type %s", typeFound)
+			logger.Info().Msgf("Discovered struct type %s", typeFound)
 			result, err := loadFromStruct(pkg.Syntax[0], typeFound, pkg.TypesInfo)
 			if err != nil {
 				return nil, nil, err
@@ -160,7 +196,8 @@ func (l *Loader) loadExpr(path string, expr *regexp.Regexp, mode LoadMode) (*pac
 
 func (l *Loader) load(path string, mode LoadMode) ([]*packages.Package, error) {
 	cfg := &packages.Config{
-		Mode: packages.NeedTypes | packages.NeedImports | packages.NeedSyntax | packages.NeedTypesInfo,
+		Mode: packages.NeedTypes | packages.NeedImports | packages.NeedSyntax | packages.NeedTypesInfo |
+			packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles,
 	}
 
 	var pkgs []*packages.Package
