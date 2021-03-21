@@ -10,11 +10,12 @@ import (
 )
 
 func TestLoad(t *testing.T) {
-	t.Run("Load Interface", func(t *testing.T) {
-		exported := packagestest.Export(t, packagestest.GOPATH, []packagestest.Module{{
-			Name: "github.com/csueiras",
-			Files: map[string]interface{}{
-				"fake/fake.go": `package fake
+	t.Run("Loads type from targeted file", func(t *testing.T) {
+		exported := packagestest.Export(t, packagestest.GOPATH, []packagestest.Module{
+			{
+				Name: "github.com/csueiras",
+				Files: map[string]interface{}{
+					"fake/fake.go": `package fake
 
 import "context"
 
@@ -22,7 +23,58 @@ type Service interface {
 	GetUserID(ctx context.Context, userID string) (string, error)
 }
 `,
-			}}})
+				},
+			},
+			{
+				Name: "github.com/csueiras",
+				Files: map[string]interface{}{
+					"fake/other.go": `package fake
+
+import "context"
+
+type OtherService interface {
+	GetSomeOtherUserID(ctx context.Context, userID string) (string, error)
+}
+`,
+				},
+			},
+		})
+		defer exported.Cleanup()
+
+		l := loader.NewLoader(func(cfg *packages.Config, patterns ...string) ([]*packages.Package, error) {
+			exported.Config.Mode = cfg.Mode
+			return packages.Load(exported.Config, patterns...)
+		})
+
+		results, err := l.LoadAll(exported.File("github.com/csueiras", "fake/fake.go"), loader.FileLoadMode)
+		require.NoError(t, err)
+		require.Equal(t, 1, len(results))
+		svc, ok := results["Service"]
+		require.True(t, ok)
+		require.NoError(t, err)
+		require.NotNil(t, svc)
+		require.Equal(t, "Service", svc.Name)
+		require.Equal(t, 1, len(svc.Methods))
+		require.Equal(t, "GetUserID", svc.Methods[0].Name)
+	})
+
+	t.Run("Load Interface", func(t *testing.T) {
+
+		exported := packagestest.Export(t, packagestest.GOPATH, []packagestest.Module{
+			{
+				Name: "github.com/csueiras",
+				Files: map[string]interface{}{
+					"fake/fake.go": `package fake
+
+import "context"
+
+type Service interface {
+	GetUserID(ctx context.Context, userID string) (string, error)
+}
+`,
+				},
+			},
+		})
 		defer exported.Cleanup()
 
 		l := loader.NewLoader(func(cfg *packages.Config, patterns ...string) ([]*packages.Package, error) {
