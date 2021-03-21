@@ -36,6 +36,7 @@ import goctx "context"
 
 type Service interface {
 	A(ctx goctx.Context) error
+	B(ctx goctx.Context, fn func(myArg string) (myBool bool)) (func() bool, error)
 }
 `,
 				},
@@ -80,8 +81,10 @@ package resilient
 // GeneratedServiceMethods are the methods in GeneratedService
 var GeneratedServiceMethods = struct {
 	A string
+	B string
 }{
 	A: "A",
+	B: "B",
 }
 `,
 				Files: []*generator.GeneratedFile{
@@ -95,6 +98,7 @@ import "context"
 
 type targetService interface {
 	A(ctx context.Context) error
+	B(ctx context.Context, arg1 func(string) bool) (func() bool, error)
 }
 type GeneratedService struct {
 	*base
@@ -135,6 +139,23 @@ func (g *GeneratedService) A(ctx context.Context) error {
 		return nonRetryableErr
 	}
 	return err
+}
+func (g *GeneratedService) B(ctx context.Context, arg1 func(string) bool) (func() bool, error) {
+	var nonRetryableErr error
+	var r0 func() bool
+	err := g.run(ctx, GeneratedServiceMethods.B, func(ctx context.Context) error {
+		var err error
+		r0, err = g.delegate.B(ctx, arg1)
+		if g.errorPredicate(GeneratedServiceMethods.B, err) {
+			return err
+		}
+		nonRetryableErr = err
+		return nil
+	})
+	if nonRetryableErr != nil {
+		return r0, nonRetryableErr
+	}
+	return r0, err
 }
 `,
 					},
