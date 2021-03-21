@@ -4,6 +4,7 @@ import (
 	"fmt"
 	rtypes "github.com/csueiras/reinforcer/internal/types"
 	"github.com/dave/jennifer/jen"
+	"github.com/pkg/errors"
 	"go/types"
 )
 
@@ -197,6 +198,29 @@ func toType(t types.Type, variadic bool) (jen.Code, error) {
 			return nil, err
 		}
 		return jen.Map(keyType).Add(elemType), nil
+	case *types.Signature:
+		fnVariadic := v.Variadic()
+		var paramTypes []jen.Code
+		lastIndex := v.Params().Len() - 1
+		for p := 0; p < v.Params().Len(); p++ {
+			paramType := v.Params().At(p).Type()
+			tt, err := toType(paramType, lastIndex == p && fnVariadic)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed to convert type %v", paramType)
+			}
+			paramTypes = append(paramTypes, tt)
+		}
+
+		var returnTypes []jen.Code
+		for r := 0; r < v.Results().Len(); r++ {
+			returnType := v.Results().At(r).Type()
+			tt, err := toType(returnType, false)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed to convert type %v", returnType)
+			}
+			returnTypes = append(returnTypes, tt)
+		}
+		return jen.Func().Params(paramTypes...).Add(returnTypes...), nil
 	default:
 		return nil, fmt.Errorf("type not handled: %T", v)
 	}
