@@ -118,6 +118,28 @@ func TestNewMethod(t *testing.T) {
 			},
 		},
 		{
+			name: "Fn(arg0 func() (string, error))",
+			args: args{
+				name: "Fn",
+				signature: types.NewSignature(nil, types.NewTuple(
+					types.NewVar(token.NoPos, nil, "myArg", types.NewSignature(nil, types.NewTuple(), types.NewTuple(
+						types.NewVar(token.NoPos, nil, "", types.Typ[types.String]),
+						types.NewVar(token.NoPos, nil, "", rtypes.ErrType),
+					), false)),
+				), types.NewTuple(), false),
+			},
+			want: &method.Method{
+				Name:           "Fn",
+				HasContext:     false,
+				ReturnsError:   false,
+				ParameterNames: []string{"arg0"},
+				ParametersNameAndType: []jen.Code{
+					jen.Id("arg0").Add(jen.Func().Params().Parens(jen.List(jen.Id("string"), jen.Id("error")))),
+				},
+				ReturnTypes: []jen.Code{},
+			},
+		},
+		{
 			name: "Fn(ctx context.Context, arg1 string) (string, error)",
 			args: args{
 				name: "Fn",
@@ -214,6 +236,7 @@ func TestNewMethod(t *testing.T) {
 			if tt.want.ReturnErrorIndex != nil {
 				require.Equal(t, *tt.want.ReturnErrorIndex, *got.ReturnErrorIndex)
 			}
+
 			require.ElementsMatch(t, tt.want.ParameterNames, got.ParameterNames)
 			require.ElementsMatch(t, tt.want.ParametersNameAndType, got.ParametersNameAndType)
 			require.ElementsMatch(t, tt.want.ReturnTypes, got.ReturnTypes)

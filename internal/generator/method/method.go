@@ -220,7 +220,13 @@ func toType(t types.Type, variadic bool) (jen.Code, error) {
 			}
 			returnTypes = append(returnTypes, tt)
 		}
-		return jen.Func().Params(paramTypes...).Add(returnTypes...), nil
+		if len(returnTypes) == 0 {
+			return jen.Func().Params(paramTypes...), nil
+		}
+		if len(returnTypes) > 1 {
+			return jen.Func().Params(paramTypes...).Parens(jen.List(returnTypes...)), nil
+		}
+		return jen.Func().Params(paramTypes...).Add(returnTypes[0]), nil
 	default:
 		return nil, fmt.Errorf("type not handled: %T", v)
 	}
