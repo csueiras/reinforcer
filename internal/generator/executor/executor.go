@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/csueiras/reinforcer/internal/generator"
 	"github.com/csueiras/reinforcer/internal/loader"
+	"github.com/pkg/errors"
 )
 
 // ErrNoTargetableTypesFound indicates that no types that could be targeted for code generation were discovered
@@ -19,8 +20,10 @@ type Loader interface {
 
 // Parameters are the input parameters for the executor
 type Parameters struct {
-	// Sources are the paths to the packages that are eligible for targetting
+	// Sources are the paths to the packages that are eligible for targeting
 	Sources []string
+	// SourcePackages are the packages that are eligible for targeting (e.g. github.com/csueiras/somelib)
+	SourcePackages []string
 	// Targets contains the target types to search for, these are expressions that may contain RegEx
 	Targets []string
 	// TargetsAll enables targeting of every exported interface type
@@ -47,6 +50,26 @@ func (e *Executor) Execute(settings *Parameters) (*generator.Generated, error) {
 
 	var cfg []*generator.FileConfig
 	var err error
+
+	for _, sourcePkg := range settings.SourcePackages {
+		var match map[string]*loader.Result
+		if settings.TargetsAll {
+			match, err = e.loader.LoadAll(sourcePkg, loader.PackageLoadMode)
+		} else {
+			match, err = e.loader.LoadMatched(sourcePkg, settings.Targets, loader.PackageLoadMode)
+		}
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to load from pkg=%s", sourcePkg)
+		}
+
+		configs, err := createFileConfigs(discoveredTypes, match)
+		if err != nil {
+			return nil, err
+		}
+
+		cfg = append(cfg, configs...)
+	}
+
 	for _, source := range settings.Sources {
 		var match map[string]*loader.Result
 		if settings.TargetsAll {
@@ -55,17 +78,13 @@ func (e *Executor) Execute(settings *Parameters) (*generator.Generated, error) {
 			match, err = e.loader.LoadMatched(source, settings.Targets, loader.FileLoadMode)
 		}
 		if err != nil {
+			return nil, errors.Wrapf(err, "failed to load from file=%s", source)
+		}
+		configs, err := createFileConfigs(discoveredTypes, match)
+		if err != nil {
 			return nil, err
 		}
-
-		// Check types aren't repeated before adding them to the generator's config
-		for typName, res := range match {
-			if _, ok := discoveredTypes[typName]; ok {
-				return nil, fmt.Errorf("multiple types with same name discovered with name %s", typName)
-			}
-			discoveredTypes[typName] = struct{}{}
-			cfg = append(cfg, generator.NewFileConfig(typName, typName, res.Methods))
-		}
+		cfg = append(cfg, configs...)
 	}
 
 	if len(cfg) == 0 {
@@ -81,4 +100,17 @@ func (e *Executor) Execute(settings *Parameters) (*generator.Generated, error) {
 		return nil, err
 	}
 	return code, nil
+}
+
+func createFileConfigs(discoveredSet map[string]struct{}, match map[string]*loader.Result) ([]*generator.FileConfig, error) {
+	var cfg []*generator.FileConfig
+	for typName, res := range match {
+		// Check types aren't repeated before adding them to the generator's config
+		if _, ok := discoveredSet[typName]; ok {
+			return nil, errors.Errorf("multiple types with same name discovered with name %s", typName)
+		}
+		discoveredSet[typName] = struct{}{}
+		cfg = append(cfg, generator.NewFileConfig(typName, typName, res.Methods))
+	}
+	return cfg, nil
 }

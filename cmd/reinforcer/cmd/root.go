@@ -93,7 +93,11 @@ such as circuit breaker, retries, timeouts, etc.
 			if err != nil {
 				return err
 			}
-			if len(sources) == 0 {
+			sourcePackages, err := flags.GetStringSlice("srcpkg")
+			if err != nil {
+				return err
+			}
+			if len(sources)+len(sourcePackages) == 0 {
 				goFile := os.Getenv("GOFILE")
 				if goFile == "" {
 					return fmt.Errorf("no source provided")
@@ -132,6 +136,7 @@ such as circuit breaker, retries, timeouts, etc.
 
 			gen, err := exec.Execute(&executor.Parameters{
 				Sources:               sources,
+				SourcePackages:        sourcePackages,
 				Targets:               targets,
 				TargetsAll:            targetAll,
 				OutPkg:                outPkg,
@@ -155,6 +160,7 @@ such as circuit breaker, retries, timeouts, etc.
 	flags.BoolP("debug", "d", false, "enables debug logs")
 	flags.BoolP("silent", "q", false, "disables logging. Mutually exclusive with the debug flag.")
 	flags.StringSliceP("src", "s", nil, "source files to scan for the target interface or struct. If unspecified the file pointed by the env variable GOFILE will be used.")
+	flags.StringSliceP("srcpkg", "k", nil, "source packages to scan for the target interface or struct.")
 	flags.StringSliceP("target", "t", []string{}, "name of target type or regex to match interface or struct names with")
 	flags.BoolP("targetall", "a", false, "codegen for all exported interfaces/structs discovered. This option is mutually exclusive with the target option.")
 	flags.StringP("outputdir", "o", "./reinforced", "directory to write the generated code to")

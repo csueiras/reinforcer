@@ -17,6 +17,7 @@ func TestRootCommand(t *testing.T) {
 		exec := &mocks.Executor{}
 		exec.On("Execute", &executor.Parameters{
 			Sources:               []string{"/path/to/target.go"},
+			SourcePackages:        []string{},
 			Targets:               []string{"Client", "SomeOtherClient"},
 			TargetsAll:            false,
 			OutPkg:                "reinforced",
@@ -32,10 +33,31 @@ func TestRootCommand(t *testing.T) {
 		require.NoError(t, c.Execute())
 	})
 
+	t.Run("Source packages", func(t *testing.T) {
+		exec := &mocks.Executor{}
+		exec.On("Execute", &executor.Parameters{
+			Sources:               []string{},
+			SourcePackages:        []string{"github.com/csueiras/somelib"},
+			Targets:               []string{"Client", "SomeOtherClient"},
+			TargetsAll:            false,
+			OutPkg:                "reinforced",
+			IgnoreNoReturnMethods: false,
+		}).Return(gen, nil)
+		writ := &mocks.Writer{}
+		writ.On("Write", "./reinforced", gen).Return(nil)
+
+		b := bytes.NewBufferString("")
+		c := cmd.NewRootCmd(exec, writ)
+		c.SetOut(b)
+		c.SetArgs([]string{"--srcpkg=github.com/csueiras/somelib", "--target=Client", "--target=SomeOtherClient", "--outputdir=./reinforced"})
+		require.NoError(t, c.Execute())
+	})
+
 	t.Run("Target All", func(t *testing.T) {
 		exec := &mocks.Executor{}
 		exec.On("Execute", &executor.Parameters{
 			Sources:               []string{"/path/to/target.go"},
+			SourcePackages:        []string{},
 			Targets:               []string{},
 			TargetsAll:            true,
 			OutPkg:                "reinforced",
@@ -55,6 +77,7 @@ func TestRootCommand(t *testing.T) {
 		exec := &mocks.Executor{}
 		exec.On("Execute", &executor.Parameters{
 			Sources:               []string{"/path/to/target.go"},
+			SourcePackages:        []string{},
 			Targets:               []string{"Client", "SomeOtherClient"},
 			TargetsAll:            false,
 			OutPkg:                "reinforced",
@@ -74,6 +97,7 @@ func TestRootCommand(t *testing.T) {
 		exec := &mocks.Executor{}
 		exec.On("Execute", &executor.Parameters{
 			Sources:               []string{"/path/to/target.go"},
+			SourcePackages:        []string{},
 			Targets:               []string{},
 			TargetsAll:            true,
 			OutPkg:                "reinforced",
