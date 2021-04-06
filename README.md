@@ -87,6 +87,7 @@ Flags:
   -o, --outputdir string   directory to write the generated code to (default "./reinforced")
   -q, --silent             disables logging. Mutually exclusive with the debug flag.
   -s, --src strings        source files to scan for the target interface or struct. If unspecified the file pointed by the env variable GOFILE will be used.
+  -k, --srcpkg strings     source packages to scan for the target interface or struct.
   -t, --target strings     name of target type or regex to match interface or struct names with
   -a, --targetall          codegen for all exported interfaces/structs discovered. This option is mutually exclusive with the target option.
   -v, --version            show reinforcer's version
