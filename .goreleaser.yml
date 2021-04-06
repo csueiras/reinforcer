@@ -63,4 +63,4 @@ brews:
       name: homebrew-reinforcer
     folder: Formula
     test: |
-      system "#{bin}reinforcer --version"
+      system "#{bin}/reinforcer --version"
