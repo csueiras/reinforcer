@@ -3,7 +3,7 @@ module github.com/csueiras/reinforcer
 go 1.13
 
 require (
-	github.com/dave/jennifer v1.4.1
+	github.com/dave/jennifer v1.6.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.21.0
@@ -12,5 +12,5 @@ require (
 	github.com/spf13/viper v1.7.1
 	github.com/stretchr/testify v1.7.0
 	github.com/vektra/mockery/v2 v2.7.4
-	golang.org/x/tools v0.1.0
+	golang.org/x/tools v0.1.8
 )
